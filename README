@@ -1,4 +1,9 @@
-ActiveScaffold batch is a gem which adds batch_update, batch_create and batch_destroy actions
-to ActiveScaffold, which means you can perform operations on more than just one record.
+ActiveScaffold batch is a gem which adds batch_update, batch_create and batch_destroy actions to ActiveScaffold, which means you can perform operations on more than just one record.
 
 gem 'active_scaffold_batch'
+
+In the config block of an activescaffold you can add any of the following lines:
+
+    config.actions.add :batch_create
+    config.actions.add :batch_update
+    config.actions.add :batch_destroy
