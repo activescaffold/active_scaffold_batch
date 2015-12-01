@@ -25,7 +25,7 @@ module ActiveScaffold
         options.update(column.options)
         html_options[:name] = "#{html_options[:name]}[]" 
         html_options[:multiple] = true
-        select_tag(column.name, options_for_select(select_options.uniq, associated_options), html_options)
+        select_tag(column.name, options_from_collection_for_select(select_options.uniq, :id, column.options[:label_method] || :to_label, associated_options), html_options)
       end
 
       def batch_create_multiple_remove_link
