@@ -13,7 +13,7 @@
     <%= render :partial => 'form', :locals => { :columns => column, :subsection_id => subsection_id} %>
     <%= link_to_visibility_toggle(subsection_id, {:default_visible => !column.collapsed}) -%>
   </li>
-  <% elsif column.association.readonly?
+  <% elsif column.association.try(:readonly?)
     next %>
   <% else
     renders_as = :field if renders_as == :subform -%>
