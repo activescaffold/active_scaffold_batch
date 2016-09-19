@@ -4,7 +4,7 @@
     <%= render :partial => 'batch_update_form_attribute_scope' -%>
   </li>
   <% columns.each :for => @record do |column| %>
-  <% next if column.plural_association? || (column.association && [:has_one].include?(column.association.macro)) %>
+  <% next unless column.association.nil? || column.association.belongs_to? %>
   <% renders_as = column_renders_as(column) %>
   <% if renders_as == :subsection -%>
     <% subsection_id = sub_section_id(:sub_section => column.label) %>
@@ -13,7 +13,7 @@
     <%= render :partial => 'form', :locals => { :columns => column, :subsection_id => subsection_id } %>
     <%= link_to_visibility_toggle(subsection_id, :default_visible => !column.collapsed) -%>
   </li>
-  <% elsif column.readonly_association?
+  <% elsif column.association.readonly?
     next %>
   <% else
     renders_as = :field if renders_as == :subform -%>

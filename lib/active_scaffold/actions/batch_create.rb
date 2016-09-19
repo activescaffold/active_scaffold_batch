@@ -49,7 +49,7 @@ module ActiveScaffold::Actions
       if @batch_create_by_records.nil?
         if marked_records_parent
           column = active_scaffold_config.columns[batch_create_by_column.to_sym]
-          @batch_create_by_records = if column.polymorphic_association?
+          @batch_create_by_records = if column.association.polymorphic?
             active_scaffold_config_for(params[:batch_create_by].singularize).model.find(marked_records_parent.keys)
           else
             column_plural_assocation_value_from_value(column, marked_records_parent.keys)
