@@ -166,13 +166,18 @@ module ActiveScaffold::Actions
       return sql_set, update_value
     end
 
+    # TODO: delete when ActiveScaffold 3.5 is released and required
+    def params_hash?(value)
+      value.is_a?(Hash) || (Rails.version >= '5.0' && value.is_a?(ActionController::Parameters))
+    end
+
     def update_attribute_values_from_params(columns, attributes)
       values = {}
-      attributes = {} unless attributes.is_a?(Hash)
+      return values unless params_hash? attributes
       columns.each :for => new_model, :crud_type => :update, :flatten => true do |column|
-        next unless attributes[column.name].is_a?(Hash) && params[:record][column.name][:operator] != 'NO_UPDATE'
+        next unless params_hash?(attributes[column.name]) && attributes[column.name][:operator] != 'NO_UPDATE'
         value = attributes[column.name]
-        value = value.merge(:value => (value[:operator] == 'NULL') ? nil : column_value_from_param_value(nil, column, value[:value]))
+        value[:value] = value[:operator] == 'NULL' ? nil : column_value_from_param_value(nil, column, value[:value])
         values[column.name] = {:column => column, :value => value}
       end
       values
