@@ -3,7 +3,7 @@ module ActiveScaffold::Actions
 
     def self.included(base)
       base.send :include, ActiveScaffold::Actions::BatchBase unless base < ActiveScaffold::Actions::BatchBase
-      base.before_filter :batch_destroy_authorized_filter, :only => [:batch_destroy]
+      base.before_action :batch_destroy_authorized_filter, :only => [:batch_destroy]
     end
 
     def batch_destroy

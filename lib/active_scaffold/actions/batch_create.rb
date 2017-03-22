@@ -3,7 +3,7 @@ module ActiveScaffold::Actions
 
     def self.included(base)
       base.send :include, ActiveScaffold::Actions::BatchBase unless base < ActiveScaffold::Actions::BatchBase
-      base.before_filter :batch_create_authorized_filter, :only => [:batch_new, :batch_create]
+      base.before_action :batch_create_authorized_filter, :only => [:batch_new, :batch_create]
       base.helper_method :batch_create_values
       base.helper_method :batch_create_by_column
       base.helper_method :batch_create_by_records

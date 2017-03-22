@@ -23,7 +23,7 @@ module ActiveScaffold::Actions
     
     def self.included(base)
       base.send :include, ActiveScaffold::Actions::BatchBase unless base < ActiveScaffold::Actions::BatchBase
-      base.before_filter :batch_update_authorized_filter, :only => [:batch_edit, :batch_update]
+      base.before_action :batch_update_authorized_filter, :only => [:batch_edit, :batch_update]
       base.helper_method :batch_update_values
     end
 
