@@ -2,6 +2,9 @@ ActiveScaffold batch is a gem which adds batch_update, batch_create and batch_de
 
 gem 'active_scaffold_batch'
 
+It works with ActiveScaffold >= 3.4.18 and rails >= 4.0.
+Use 3.3.x for rails 3.2.x.
+
 In the config block of an activescaffold you can add any of the following lines:
 
     config.actions.add :batch_create
