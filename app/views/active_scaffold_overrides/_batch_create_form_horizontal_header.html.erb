@@ -1,6 +1,6 @@
 <thead>
   <tr>
-    <% columns.each :flatten => true do |column| -%>
+    <% columns.each_column(flatten: true) do |column| -%>
     <% next if column_renders_as(column) == :hidden -%>
       <th class="<%= 'required' if column.required? %>"><label><%= column.label %></label></th>
     <% end -%>

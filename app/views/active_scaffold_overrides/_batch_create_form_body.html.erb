@@ -3,7 +3,7 @@
   <li class="form-element">
     <%= hidden_field_tag("batch_scope", (batch_scope || 'LISTED')) %>
   </li>
-  <% columns.each :for => @record do |column| %>
+  <% columns.each_column(for: @record) do |column| %>
   <% next unless column.association.nil? || column.association.belongs_to? %>
   <% renders_as = column_renders_as(column) %>
   <% if renders_as == :subsection -%>

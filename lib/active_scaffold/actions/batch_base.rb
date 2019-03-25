@@ -104,7 +104,7 @@ module ActiveScaffold::Actions
       if respond_to? "#{action_name}_respond_to_xml", true
         send("#{action_name}_respond_to_xml")
       else
-        render :xml => response_object.to_xml(:only => active_scaffold_config.send(action_name).columns.names), :content_type => Mime::XML, :status => response_status
+        render :xml => response_object.to_xml(:only => active_scaffold_config.send(action_name).columns.visible_columns_names), :content_type => Mime::XML, :status => response_status
       end
     end
 
@@ -112,7 +112,7 @@ module ActiveScaffold::Actions
       if respond_to? "#{action_name}_respond_to_json", true
         send("#{action_name}_respond_to_json")
       else
-        render :text => response_object.to_json(:only => active_scaffold_config.send(action_name).columns.names), :content_type => Mime::JSON, :status => response_status
+        render :text => response_object.to_json(:only => active_scaffold_config.send(action_name).columns.visible_columns_names), :content_type => Mime::JSON, :status => response_status
       end
     end
 
@@ -120,7 +120,7 @@ module ActiveScaffold::Actions
       if respond_to? "#{action_name}_respond_to_yaml", true
         send("#{action_name}_respond_to_yaml")
       else
-        render :text => Hash.from_xml(response_object.to_xml(:only => active_scaffold_config.send(action_name).columns.names)).to_yaml, :content_type => Mime::YAML, :status => response_status
+        render :text => Hash.from_xml(response_object.to_xml(:only => active_scaffold_config.send(action_name).columns.visible_columns_names)).to_yaml, :content_type => Mime::YAML, :status => response_status
       end
     end
 

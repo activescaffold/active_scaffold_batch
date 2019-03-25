@@ -212,7 +212,7 @@ module ActiveScaffold::Actions
     def create_attribute_values_from_params(columns, attributes)
       values = {}
       parent_record = active_scaffold_config.model.new
-      columns.each :for => active_scaffold_config.model, :crud_type => :create, :flatten => true do |column|
+      columns.each_column(for: active_scaffold_config.model, crud_type: :create, flatten: true) do |column|
         next unless attributes.has_key?(column.name)
         if column == batch_create_by_column.to_sym
           @batch_create_by_records = batch_values_for_column(column, attributes[column.name])

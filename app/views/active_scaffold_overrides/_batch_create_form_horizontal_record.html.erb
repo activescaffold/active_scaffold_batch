@@ -7,7 +7,7 @@
 </tr>
 <% end %>
 <tr class="form_record">
-<% columns.each :flatten => true do |column| -%>
+<% columns.each_column(flatten: true) do |column| -%>
 <%
   next if column_renders_as(column) == :hidden
   next unless record.authorized_for?(:crud_type => :create, :column => column.name) 

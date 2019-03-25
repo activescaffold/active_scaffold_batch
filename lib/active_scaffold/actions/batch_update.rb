@@ -174,7 +174,7 @@ module ActiveScaffold::Actions
     def update_attribute_values_from_params(columns, attributes)
       values = {}
       return values unless params_hash? attributes
-      columns.each :for => new_model, :crud_type => :update, :flatten => true do |column|
+      columns.each_column(for: new_model, crud_type: :update, flatten: true) do |column|
         next unless params_hash?(attributes[column.name]) && attributes[column.name][:operator] != 'NO_UPDATE'
         value = attributes[column.name]
         value[:value] = value[:operator] == 'NULL' ? nil : column_value_from_param_value(nil, column, value[:value])
