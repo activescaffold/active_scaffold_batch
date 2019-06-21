@@ -9,7 +9,7 @@
   border-top: 0;
 }
 .active-scaffold .multiple .form_record a.remove {
-  background-image: url("/assets/active_scaffold/cross.png");
+  background-image: image-url("active_scaffold/cross.png");
   display: block;
   font-weight: bold;
   height: 16px;
@@ -27,7 +27,7 @@
 .active-scaffold-header div.actions > a.batch_new {
   background-position: 5px 50%;
   background-repeat: no-repeat;
-  background-image: url("/assets/active_scaffold/add.png");
+  background-image: image-url("active_scaffold/add.png");
   margin: 0;
   padding: 5px 5px 5px 25px;
 }

@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    active_scaffold_batch (3.4.2)
+    active_scaffold_batch (3.4.3)
       active_scaffold (>= 3.6.0.pre)
 
 GEM
