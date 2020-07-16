@@ -35,6 +35,16 @@ module ActiveScaffold
       def batch_create_multiple_layout
         "batch_create_form_#{active_scaffold_config.batch_create.layout}"
       end
+
+      def current_form_columns(record, scope, subform_controller = nil)
+        columns = super
+        return columns if columns
+        if %i[batch_new batch_create].include? action_name.to_sym
+          active_scaffold_config.batch_create.columns.visible_columns_names
+        elsif %i[batch_edit batch_update].include? action_name.to_sym
+          active_scaffold_config.batch_update.columns.visible_columns_names
+        end
+      end
     end
   end
 end
