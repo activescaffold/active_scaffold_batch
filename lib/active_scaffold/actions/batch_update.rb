@@ -244,7 +244,7 @@ module ActiveScaffold::Actions
       current_value = record.send(column.name)
       {"number"=>"", "unit"=>"DAYS", "value"=>"November 16, 2010", "operator"=>"REPLACE"}
       if ActiveScaffold::Actions::BatchUpdate::GenericOperators.include?(calculation_info[:operator]) || ActiveScaffold::Actions::BatchUpdate::DateOperators.include?(calculation_info[:operator])
-        operand = self.class.condition_value_for_datetime(calculation_info[:value], column.column.type == :date ? :to_date : :to_time)
+        operand = self.class.condition_value_for_datetime(column, calculation_info[:value], column.column.type == :date ? :to_date : :to_time)
         case calculation_info[:operator]
         when 'REPLACE' then operand
         when 'NULL' then nil
