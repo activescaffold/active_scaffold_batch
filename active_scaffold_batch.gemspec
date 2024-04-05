@@ -21,6 +21,6 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.add_development_dependency(%q<bundler>, ["~> 1.0"])
-  s.add_runtime_dependency 'active_scaffold', '>= 3.6.0.pre'
+  s.add_runtime_dependency 'active_scaffold', '>= 3.7.1'
 end
 
