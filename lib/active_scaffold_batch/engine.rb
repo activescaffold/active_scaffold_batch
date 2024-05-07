@@ -30,18 +30,5 @@ module ActiveScaffoldBatch
         end
       end
     end
-
-    initializer "active_scaffold_batch.assets" do
-      ActiveSupport.on_load :active_scaffold do
-        self.stylesheets << 'active_scaffold_batch'
-        self.javascripts << 'active_scaffold_batch'
-      end
-    end
-
-    initializer "active_scaffold_batch" do
-      ActiveSupport.on_load :active_scaffold do
-        require 'autoload'
-      end
-    end
   end
 end

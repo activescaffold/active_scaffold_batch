@@ -6,3 +6,20 @@ module ActiveScaffoldBatch
     File.dirname(__FILE__) + "/.."
   end
 end
+
+module ActiveScaffold
+  module Actions
+    ActiveScaffold.autoload_subdir('actions', self, File.dirname(__FILE__))
+  end
+
+  module Config
+    ActiveScaffold.autoload_subdir('config', self, File.dirname(__FILE__))
+  end
+
+  module Helpers
+    ActiveScaffold.autoload_subdir('helpers', self, File.dirname(__FILE__))
+  end
+end
+
+ActiveScaffold.stylesheets << 'active_scaffold_batch'
+ActiveScaffold.javascripts << "#{ActiveScaffold.js_framework}/active_scaffold_batch"
