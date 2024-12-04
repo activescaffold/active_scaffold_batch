@@ -20,6 +20,6 @@ Gem::Specification.new do |s|
   s.test_files = `git ls-files test`.split("\n")
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.add_runtime_dependency 'active_scaffold', '>= 3.7.1'
+  s.add_runtime_dependency 'active_scaffold', '>= 4.0.0.rc1'
 end
 

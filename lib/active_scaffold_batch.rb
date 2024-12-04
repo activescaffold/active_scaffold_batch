@@ -22,4 +22,4 @@ module ActiveScaffold
 end
 
 ActiveScaffold.stylesheets << 'active_scaffold_batch'
-ActiveScaffold.javascripts << "#{ActiveScaffold.js_framework}/active_scaffold_batch"
+ActiveScaffold.javascripts << 'active_scaffold_batch'
