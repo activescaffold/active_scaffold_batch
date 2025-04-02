@@ -217,7 +217,8 @@ module ActiveScaffold::Actions
     alias_method :batch_update_value_for_float, :batch_update_value_for_numeric
 
     def batch_update_all_value_for_numeric(column, calculation_info)
-      if ActiveScaffold::Actions::BatchUpdate::GenericOperators.include?(calculation_info[:operator]) || ActiveScaffold::Actions::BatchUpdate::NumericOperators.include?(calculation_info[:operator])
+      operator = calculation_info[:operator]
+      if operator == 'NULL' || ActiveScaffold::Actions::BatchUpdate::GenericOperators.include?(operator) || ActiveScaffold::Actions::BatchUpdate::NumericOperators.include?(operator)
         operand = active_scaffold_config.model.quote_value(self.class.condition_value_for_numeric(column, calculation_info[:value]))
         if calculation_info[:opt] == 'PERCENT'
           operand = "#{active_scaffold_config.model.connection.quote_column_name(column.name)} / 100.0 * #{operand}"
@@ -242,18 +243,18 @@ module ActiveScaffold::Actions
 
     def batch_update_value_for_date_picker(column, record, calculation_info)
       current_value = record.send(column.name)
-      {"number"=>"", "unit"=>"DAYS", "value"=>"November 16, 2010", "operator"=>"REPLACE"}
-      if ActiveScaffold::Actions::BatchUpdate::GenericOperators.include?(calculation_info[:operator]) || ActiveScaffold::Actions::BatchUpdate::DateOperators.include?(calculation_info[:operator])
+      operator = calculation_info[:operator]
+      if operator == 'NULL' || ActiveScaffold::Actions::BatchUpdate::GenericOperators.include?(operator) || ActiveScaffold::Actions::BatchUpdate::DateOperators.include?(operator)
         operand = self.class.condition_value_for_datetime(column, calculation_info[:value], column.column.type == :date ? :to_date : :to_time)
         case calculation_info[:operator]
         when 'REPLACE' then operand
         when 'NULL' then nil
         when 'PLUS' then
           trend_number = [calculation_info['number'].to_i,  1].max
-          current_value.in((trend_number).send(calculation_info['unit'].downcase.singularize.to_sym))
+          current_value&.in((trend_number).send(calculation_info['unit'].downcase.singularize.to_sym))
         when 'MINUS' then
           trend_number = [calculation_info['number'].to_i,  1].max
-          current_value.ago((trend_number).send(calculation_info['unit'].downcase.singularize.to_sym))
+          current_value&.ago((trend_number).send(calculation_info['unit'].downcase.singularize.to_sym))
         else
           current_value
         end
@@ -261,7 +262,6 @@ module ActiveScaffold::Actions
         current_value
       end
     end
-    alias_method :batch_update_value_for_calendar_date_select, :batch_update_value_for_date_picker
 
     def override_batch_update_value(form_ui)
       method = "batch_update_value_for_#{form_ui}"

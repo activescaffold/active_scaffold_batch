@@ -17,7 +17,9 @@ module ActiveScaffold
        elsif column.column and column.form_ui.nil? and (method = override_update(column.column.type))
           send(method, column, options)
         else
-          active_scaffold_update_generic_operators_select(column, options)<< ' ' << active_scaffold_render_input(column, options.merge(:name => "record[#{column.name}][value]"))
+          show_field = batch_update_values.dig(column.name, :value, :operator) == 'REPLACE'
+          active_scaffold_update_generic_operators_select(column, options) << ' ' <<
+            active_scaffold_render_input(column, options.merge(name: "record[#{column.name}][value]", style: ('display: none;' unless show_field)))
         end
       end
 
@@ -31,8 +33,8 @@ module ActiveScaffold
 
       def active_scaffold_update_generic_operators_select(column, options)
         current = {:operator => 'NO_UPDATE'}
-        current.merge!(batch_update_values[column.name][:value].symbolize_keys) if batch_update_values[column.name] && batch_update_values[column.name][:value]
-        select_tag("[record][#{column.name}][operator]",
+        current.merge!(batch_update_values[column.name][:value].symbolize_keys) if batch_update_values.dig(column.name, :value)
+        select_tag("record[#{column.name}][operator]",
               options_for_select(active_scaffold_update_generic_operators(column), current[:operator]),
               :id => "#{options[:id]}_operator",
               :class => "as_batch_update_operator text_input")
@@ -43,12 +45,12 @@ module ActiveScaffold
         current.merge!(batch_update_values[column.name][:value].symbolize_keys) if batch_update_values[column.name] && batch_update_values[column.name][:value]
         operator_options = active_scaffold_update_generic_operators(column) + ActiveScaffold::Actions::BatchUpdate::NumericOperators.collect {|comp| [as_(comp.downcase.to_sym), comp]}
         select_options = ActiveScaffold::Actions::BatchUpdate::NumericOptions.collect {|comp| [as_(comp.downcase.to_sym), comp]}
-        html = select_tag("[record][#{column.name}][operator]",
+        html = select_tag("record[#{column.name}][operator]",
               options_for_select(operator_options, current[:operator]),
               :id => "#{options[:id]}_operator",
               :class => "as_update_numeric_option")
-        html << ' ' << text_field_tag("[record][#{column.name}][value]", current[:value], active_scaffold_input_text_options)
-        html << ' ' << select_tag("[record][#{column.name}][opt]",
+        html << ' ' << text_field_tag("record[#{column.name}][value]", current[:value], active_scaffold_input_text_options)
+        html << ' ' << select_tag("record[#{column.name}][opt]",
               options_for_select(select_options, current[:opt]),
               :id => "#{options[:id]}_opt",
               :class => "as_update_numeric_option")
