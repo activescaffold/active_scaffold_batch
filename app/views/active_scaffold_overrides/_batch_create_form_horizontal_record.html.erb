@@ -9,7 +9,8 @@
 <tr class="form_record">
 <% columns.each_column(flatten: true) do |column| -%>
 <%
-  next if column_renders_as(column) == :hidden
+  renders_as = column_renders_as(column)
+  next if renders_as == :hidden
   next unless record.authorized_for?(:crud_type => :create, :column => column.name) 
   column = column.clone
   column.form_ui ||= :select if column.association
@@ -19,7 +20,7 @@
   col_class << column.css_class unless column.css_class.nil?
 -%>
   <td class="<%= col_class.join(' ') %>">
-    <%= render :partial => form_partial_for_column(column), :locals => { :column => column, :scope => scope, :record => record } -%>
+    <%= render_column(column, record, renders_as, scope) %>
   </td>
 <% end -%>
   <td><%= batch_create_multiple_remove_link unless first %></td>
