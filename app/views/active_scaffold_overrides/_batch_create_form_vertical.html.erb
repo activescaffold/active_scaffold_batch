@@ -1,7 +1,12 @@
 <div id="<%= element_form_id :action => form_action %>-content" class="multiple">
-<% first = true -%>
-<% records.each do |scope, record| -%>
-  <%= render :partial => 'batch_create_form_vertical_record', :locals => { :columns => columns, :form_action => form_action, :scope => "[#{scope}]", :first => first, :record => record } %>
-  <% first = false -%>
-<% end -%>
+  <%
+    first = true
+    original_record = @record
+  -%>
+  <% records.each do |scope, record| -%>
+    <% @record = record %>
+    <%= render :partial => 'batch_create_form_vertical_record', :locals => { :columns => columns, :form_action => form_action, :scope => "[#{scope}]", :first => first, :record => record } %>
+    <% first = false -%>
+  <% end -%>
 </div>
+<% @record = original_record %>
