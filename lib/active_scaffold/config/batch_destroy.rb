@@ -40,11 +40,6 @@ module ActiveScaffold::Config
     # the ActionLink for this action
     attr_accessor :link
 
-    # the label= method already exists in the Form base class
-    def label(model = nil)
-      model ||= @core.label(:count => 2)
-      @label ? as_(@label) : as_(:delete_model, :model => model)
-    end
-
+    undef_method :label=
   end
 end

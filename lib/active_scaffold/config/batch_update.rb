@@ -44,8 +44,8 @@ module ActiveScaffold::Config
 
 
     # the label= method already exists in the Form base class
-    def label(model = nil)
-      model ||= @core.label(:count => 2)
+    def label(model = nil, core: @core)
+      model ||= core.label(:count => 2)
       @label ? as_(@label) : as_(:update_model, :model => model)
     end
   end
