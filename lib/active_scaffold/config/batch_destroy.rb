@@ -39,7 +39,5 @@ module ActiveScaffold::Config
 
     # the ActionLink for this action
     attr_accessor :link
-
-    undef_method :label=
   end
 end
