@@ -8,7 +8,8 @@ module ActiveScaffold
         options = active_scaffold_input_options(column, scope, options)
 
         if column.form_ui == :record_select
-          active_scaffold_record_select(column, options, batch_create_by_records, true)
+          ui_options = column.form_ui_options || column.options
+          active_scaffold_record_select(options[:object], column, options, batch_create_by_records, true, ui_options: ui_options)
         elsif column.association
           active_scaffold_batch_create_singular_association(column, options)
         else
