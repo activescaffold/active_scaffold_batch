@@ -7,26 +7,20 @@ module ActiveScaffold
       def active_scaffold_batch_create_by_column(column, scope = nil, options = {})
         options = active_scaffold_input_options(column, scope, options)
 
+        ui_options = column.form_ui_options || column.options
         if column.form_ui == :record_select
-          ui_options = column.form_ui_options || column.options
           active_scaffold_record_select(options[:object], column, options, batch_create_by_records, true, ui_options: ui_options)
         elsif column.association
-          active_scaffold_batch_create_singular_association(column, options)
+          active_scaffold_batch_create_singular_association(column, options, ui_options: ui_options)
         else
           text_area_tag(column.name, params[:record] ? params[:record][column.name] : '', options.merge(column.options[:html_options] || {}))
         end
 
       end
 
-      def active_scaffold_batch_create_singular_association(column, html_options)
+      def active_scaffold_batch_create_singular_association(column, html_options, ui_options: column.options)
         associated_options = batch_create_by_records.collect {|r| r.id}
-        select_options = sorted_association_options_find(column.association, nil, html_options.delete(:record))
-        html_options.update(column.options[:html_options] || {})
-        options = {}
-        options.update(column.options)
-        html_options[:name] = "#{html_options[:name]}[]" 
-        html_options[:multiple] = true
-        select_tag(column.name, options_from_collection_for_select(select_options.uniq, :id, column.options[:label_method] || :to_label, associated_options), html_options)
+        active_scaffold_input_singular_association(column, html_options.merge(multiple: true, associated: associated_options), {include_blank: false}, ui_options: ui_options)
       end
 
       def batch_create_multiple_remove_link
