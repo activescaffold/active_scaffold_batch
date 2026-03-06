@@ -1,4 +1,4 @@
 <span class='batch-create-rows'>
-  <%= as_(:add_some_records, :model => active_scaffold_config.label(:count => 2), :number_input => text_field_tag(:num_records, 1, :id => nil)).html_safe %>
-  <%= link_to as_(:add), params_for(:action => :batch_add), :remote => true %>
+  <%= as_(:add_some_records, model: active_scaffold_config.label(count: 2), number_input: text_field_tag(:num_records, 1, id: nil)).html_safe %>
+  <%= link_to as_(:add), params_for(action: :batch_add), remote: true %>
 </span>

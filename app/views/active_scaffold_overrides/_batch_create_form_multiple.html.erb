@@ -5,4 +5,4 @@
     {scope => @record}
   end
 -%>
-<%= render :partial => batch_create_multiple_layout, :locals => { :columns => columns, :form_action => form_action, :records => records } %>
+<%= render batch_create_multiple_layout, columns: columns, form_action: form_action, records: records %>

@@ -1,10 +1,10 @@
 <% if @error_records.present? && @error_records.is_a?(Array) -%>
-  <%= render :partial => 'messages' unless request.xhr? %>
+  <%= render 'messages' unless request.xhr? %>
 
   <% id_column = active_scaffold_config.model.human_attribute_name(batch_create_by_column) if batch_create_by_column && active_scaffold_config.columns[batch_create_by_column].association.nil? %>
   <% @error_records.each do |record| %>
     <% record_title = record.new_record? ? (id_column ? "(#{id_column} #{record.send(batch_create_by_column)})" : '') : record.to_label %>
-    <%= active_scaffold_error_messages_for record, :object_name => "#{record.class.model_name.human.downcase} #{record_title}" %>
+    <%= active_scaffold_error_messages_for record, object_name: "#{record.class.model_name.human.downcase} #{record_title}" %>
   <% end %>
 <% else %>
   <%= render :super %>

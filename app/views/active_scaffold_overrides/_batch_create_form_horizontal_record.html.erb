@@ -1,8 +1,8 @@
-<% first = true unless local_assigns.has_key? :first -%>
+<% first = true unless local_assigns.key? :first -%>
 <% if record.errors.count -%>
 <tr class="form_record-errors">
-  <td colspan="<%= columns.length + 1 %>" id="<%= element_messages_id :action => record.class.name.underscore %>">
-    <%= active_scaffold_error_messages_for :record, :object_name => record.class.model_name.human.downcase %>
+  <td colspan="<%= columns.length + 1 %>" id="<%= element_messages_id action: record.class.name.underscore %>">
+    <%= active_scaffold_error_messages_for :record, object_name: record.class.model_name.human.downcase %>
   </td>
 </tr>
 <% end %>
@@ -11,7 +11,7 @@
 <%
   renders_as = column_renders_as(column)
   next if renders_as == :hidden
-  next unless record.authorized_for?(:crud_type => :create, :column => column.name) 
+  next unless record.authorized_for?(crud_type: :create, column: column.name)
   column = column.clone
   column.form_ui ||= :select if column.association
   

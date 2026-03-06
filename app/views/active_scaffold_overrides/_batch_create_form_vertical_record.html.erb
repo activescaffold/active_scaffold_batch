@@ -1,6 +1,6 @@
-<% first = true unless local_assigns.has_key? :first -%>
+<% first = true unless local_assigns.key? :first -%>
 <div class="form_record">
-  <%= render :partial => 'form_messages' %>
-  <%= render :partial => 'form', :locals => { :columns => columns, :form_action => form_action, :scope => scope } %>
+  <%= render 'form_messages' %>
+  <%= render 'form', {columns: columns, form_action: form_action, scope: scope} %>
   <%= batch_create_multiple_remove_link unless first %>
 </div>
