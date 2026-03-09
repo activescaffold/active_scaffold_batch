@@ -61,13 +61,17 @@ module ActiveScaffold
       alias_method :active_scaffold_update_float, :active_scaffold_update_numeric
 
       def active_scaffold_update_scope_select(select_options = active_scaffold_update_scope_select_options)
-        if select_options.length > 1
+        if active_scaffold_update_scope_select_hidden?(select_options)
+          hidden_field_tag("batch_scope", select_options.first[1]) unless select_options.empty?
+        else
           select_tag("batch_scope",
                      options_for_select(select_options, batch_scope || select_options.last[1]),
                      class: "text_input")
-        else
-          hidden_field_tag("batch_scope", select_options.first[1]) unless select_options.empty?
         end
+      end
+
+      def active_scaffold_update_scope_select_hidden?(select_options = active_scaffold_update_scope_select_options)
+        select_options.length < 2
       end
 
       def active_scaffold_update_scope_select_options
