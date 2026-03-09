@@ -5,9 +5,12 @@ jQuery(document).ready(function() {
     return true;
   });
   jQuery(document).on('change', 'select.as_update_date_operator, select.as_batch_update_operator', function(event) {
-    ActiveScaffold[jQuery(this).val() === 'REPLACE' ? 'show' : 'hide'](jQuery(this).closest('.form-element').find(':input, .mceEditor + div').not(this));
+    var fields = jQuery(this).closest('.form-element').find(':input, .mceEditor + div').not(this).filter(function() {
+      return jQuery(this).closest('.search-date-trend').length === 0;
+    });
+    ActiveScaffold[jQuery(this).val() === 'REPLACE' ? 'show' : 'hide'](fields);
   });
-  jQuery(document).on('change', 'select.as_update_date_operator', function(event) {
-    ActiveScaffold[['REPLACE', 'NO_UPDATE', 'NULL'].indexOf(jQuery(this).val()) !== -1 ? 'hide' : 'show'](jQuery(this).next().next());
+  jQuery(document).on('change', '.as_update_date_operator', function(event) {
+    ActiveScaffold[['REPLACE', 'NO_UPDATE', 'NULL'].indexOf(jQuery(this).val()) !== -1 ? 'hide' : 'show'](jQuery(this).closest('.form-element').find('.search-date-trend'));
   });
 });
