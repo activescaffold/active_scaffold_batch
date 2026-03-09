@@ -1,5 +1,5 @@
 <% first = true unless local_assigns.key? :first -%>
-<div class="form_record">
+<div class="sub-form-record">
   <%= render 'form_messages' %>
   <%= render 'form', {columns: columns, form_action: form_action, scope: scope} %>
   <%= link_to(as_(:remove), '#', as_element_attributes(:subform_record_remove, class: 'destroy')) unless first %>
