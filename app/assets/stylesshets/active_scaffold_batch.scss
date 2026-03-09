@@ -1,22 +1,12 @@
-.active-scaffold .multiple .form_record .errorExplanation {
+.active-scaffold .multiple .sub-form-record .errorExplanation {
   clear: left;
   margin-top: 10px;
 }
-.active-scaffold .multiple .form_record {
+.active-scaffold .multiple .sub-form-record {
   border-top: 1px solid #7FCF00;
 }
-.active-scaffold .multiple .form_record:first-child {
+.active-scaffold .multiple thead + .sub-form-record {
   border-top: 0;
-}
-.active-scaffold .multiple .form_record a.remove {
-  background-image: image-url("active_scaffold/cross.png");
-  display: block;
-  font-weight: bold;
-  height: 16px;
-  padding: 0;
-  text-indent: -4000px;
-  width: 16px;
-  margin: 0 5px 10px;
 }
 .batch-create-rows {
   float: right;

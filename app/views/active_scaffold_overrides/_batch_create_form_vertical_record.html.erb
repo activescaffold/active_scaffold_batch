@@ -2,5 +2,5 @@
 <div class="form_record">
   <%= render 'form_messages' %>
   <%= render 'form', {columns: columns, form_action: form_action, scope: scope} %>
-  <%= batch_create_multiple_remove_link unless first %>
+  <%= link_to(as_(:remove), '#', as_element_attributes(:subform_record_remove, class: 'destroy')) unless first %>
 </div>

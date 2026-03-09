@@ -1,13 +1,9 @@
 <div class="form sub-form horizontal-sub-form">
-<table cellpadding="0" cellspacing="0">
-  <%= render 'batch_create_form_horizontal_header', {columns: columns, record: records.first} %>
+<table cellpadding="0" cellspacing="0" id="<%= element_form_id action: form_action %>-content" class="multiple">
+  <%= render 'horizontal_subform_header', {columns: columns, scope: nil, record_class: records.values.first.class, crud_type: columns.action.crud_type, parent_record: nil, parent_column: nil} %>
 
-  <tbody id="<%= element_form_id action: form_action %>-content" class="multiple">
-    <% first = true -%>
-    <% records.each do |scope, record| %>
-    <%= render 'batch_create_form_horizontal_record', {columns: columns, form_action: form_action, scope: "[#{scope}]", first: first, record: record} %>
-    <% first = false -%>
-    <% end -%>
-  </tbody>
+  <% records.each.with_index do |(scope, record), index| %>
+  <%= render 'batch_create_form_horizontal_record', {columns: columns, form_action: form_action, scope: "[#{scope}]", first: index == 0, record: record} %>
+  <% end -%>
 </table>
 </div>

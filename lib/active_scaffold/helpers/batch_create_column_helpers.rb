@@ -23,10 +23,6 @@ module ActiveScaffold
         active_scaffold_input_singular_association(column, html_options.merge(multiple: true, associated: associated_options), {include_blank: false}, ui_options: ui_options)
       end
 
-      def batch_create_multiple_remove_link
-        link_to as_(:remove), '#', class: 'remove'
-      end
-
       def batch_create_multiple_layout
         "batch_create_form_#{active_scaffold_config.batch_create.layout}"
       end
