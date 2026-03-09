@@ -5,7 +5,7 @@ jQuery(document).ready(function() {
     return true;
   });
   jQuery(document).on('change', 'select.as_update_date_operator, select.as_batch_update_operator', function(event) {
-    ActiveScaffold[jQuery(this).val() === 'REPLACE' ? 'show' : 'hide'](jQuery(this).next());
+    ActiveScaffold[jQuery(this).val() === 'REPLACE' ? 'show' : 'hide'](jQuery(this).closest('.form-element').find(':input, .mceEditor + div').not(this));
   });
   jQuery(document).on('change', 'select.as_update_date_operator', function(event) {
     ActiveScaffold[['REPLACE', 'NO_UPDATE', 'NULL'].indexOf(jQuery(this).val()) !== -1 ? 'hide' : 'show'](jQuery(this).next().next());
