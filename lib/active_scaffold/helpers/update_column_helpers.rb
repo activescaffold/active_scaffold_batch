@@ -45,20 +45,23 @@ module ActiveScaffold
         current.merge!(batch_update_values[column.name][:value].symbolize_keys) if batch_update_values[column.name] && batch_update_values[column.name][:value]
         operator_options = active_scaffold_update_generic_operators(column) + ActiveScaffold::Actions::BatchUpdate::NumericOperators.collect {|comp| [as_(comp.downcase.to_sym), comp]}
         select_options = ActiveScaffold::Actions::BatchUpdate::NumericOptions.collect {|comp| [as_(comp.downcase.to_sym), comp]}
+        style = current[:operator] == 'NO_UPDATE' ? 'display: none;' : nil
         html = select_tag("record[#{column.name}][operator]",
                           options_for_select(operator_options, current[:operator]),
                           id: "#{options[:id]}_operator",
                           class: "as_update_numeric_option")
-        html << ' ' << text_field_tag("record[#{column.name}][value]", current[:value], active_scaffold_input_text_options)
+        html << ' ' << text_field_tag("record[#{column.name}][value]", current[:value], active_scaffold_input_text_options.merge(style: style))
         html << ' ' << select_tag("record[#{column.name}][opt]",
                                   options_for_select(select_options, current[:opt]),
                                   id: "#{options[:id]}_opt",
-                                  class: "as_update_numeric_option")
+                                  class: "as_update_numeric_option",
+                                  style: style)
         html
       end
       alias_method :active_scaffold_update_integer, :active_scaffold_update_numeric
       alias_method :active_scaffold_update_decimal, :active_scaffold_update_numeric
       alias_method :active_scaffold_update_float, :active_scaffold_update_numeric
+      alias_method :active_scaffold_update_number, :active_scaffold_update_numeric
 
       def active_scaffold_update_scope_select(select_options = active_scaffold_update_scope_select_options)
         if active_scaffold_update_scope_select_hidden?(select_options)
