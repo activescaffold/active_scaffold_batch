@@ -12,9 +12,7 @@
   renders_as = column_renders_as(column)
   next if renders_as == :hidden
   next unless record.authorized_for?(crud_type: :create, column: column.name)
-  column = column.clone
-  column.form_ui ||= :select if column.association
-  
+
   col_class = []
   col_class << 'required' if column.required?
   col_class << column.css_class unless column.css_class.nil?
