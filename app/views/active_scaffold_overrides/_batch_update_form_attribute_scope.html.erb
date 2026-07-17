@@ -1,14 +1,9 @@
-<% scope ||= nil
-  scope_select_options = active_scaffold_update_scope_select_options %>
-<% if scope_select_options.length < 2 %>
-  <%= active_scaffold_update_scope_select(scope_select_options) %>
+<%
+  scope_select_options = active_scaffold_update_scope_select_options
+  field = active_scaffold_update_scope_select(scope_select_options)
+%>
+<% if active_scaffold_update_scope_select_hidden? %>
+  <%= field %>
 <% else %>
-<dl>
-  <dt>
-    <label for="record_batch_scope"><%= as_(:records) %></label>
-  </dt>
-  <dd>
-    <%= active_scaffold_update_scope_select(scope_select_options) %>
-  </dd>
-</dl>
+  <%= form_attribute_html(nil, label_tag('record_batch_scope', as_(:records)), field, nil, {}) %>
 <% end %>

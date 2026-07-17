@@ -19,7 +19,7 @@ module ActiveScaffold::Config
     def self.link=(val)
       @@link = val
     end
-    @@link = ActiveScaffold::DataStructures::ActionLink.new('batch_new', :label => :create, :type => :collection, :security_method => :batch_create_authorized?, :ignore_method => :batch_create_ignore?)
+    @@link = ActiveScaffold::DataStructures::ActionLink.new('batch_new', label: :create, type: :collection, security_method: :batch_create_authorized?, ignore_method: :batch_create_ignore?)
 
     # configures where the plugin itself is located. there is no instance version of this.
     cattr_accessor :plugin_directory
@@ -72,8 +72,8 @@ module ActiveScaffold::Config
 
     # the label= method already exists in the Form base class
     def label(model = nil, core: @core)
-      model ||= core.label(:count => 2)
-      @label ? as_(@label) : as_(:create_model, :model => model)
+      model ||= core.label(count: 2)
+      @label ? as_(@label) : as_(:create_model, model: model)
     end
   end
 end

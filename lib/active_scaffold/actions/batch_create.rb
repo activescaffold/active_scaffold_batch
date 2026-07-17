@@ -3,7 +3,7 @@ module ActiveScaffold::Actions
 
     def self.included(base)
       base.send :include, ActiveScaffold::Actions::BatchBase unless base < ActiveScaffold::Actions::BatchBase
-      base.before_action :batch_create_authorized_filter, :only => [:batch_new, :batch_create]
+      base.before_action :batch_create_authorized_filter, only: [:batch_new, :batch_create]
       base.helper_method :batch_create_values
       base.helper_method :batch_create_by_column
       base.helper_method :batch_create_by_records
@@ -27,14 +27,14 @@ module ActiveScaffold::Actions
     protected
     def batch_new_respond_to_html
       if batch_successful?
-        render(:action => 'batch_create')
+        render(action: 'batch_create')
       else
         return_to_main
       end
     end
 
     def batch_new_respond_to_js
-      render(:partial => 'batch_create_form')
+      render(partial: 'batch_create_form')
     end
 
     def batch_add_respond_to_js
@@ -63,20 +63,20 @@ module ActiveScaffold::Actions
       if params[:iframe]=='true' # was this an iframe post ?
         do_refresh_list
         responds_to_parent do
-          render :action => 'on_batch_create.js', :layout => false
+          render action: 'on_batch_create.js', layout: false
         end
       else # just a regular post
         if batch_successful?
           return_to_main
         else
-          render(:action => 'batch_create')
+          render(action: 'batch_create')
         end
       end
     end
 
     def batch_create_respond_to_js
       do_refresh_list
-      render :action => 'on_batch_create'
+      render action: 'on_batch_create'
     end
 
     def do_batch_new
@@ -142,7 +142,7 @@ module ActiveScaffold::Actions
       else
         processed_records, created_records = yield
       end
-      flash[:info] = as_(:some_records_created, :count => created_records, :model => active_scaffold_config.label(:count => created_records)) if batch_successful? || created_records > 0
+      flash[:info] = as_(:some_records_created, count: created_records, model: active_scaffold_config.label(count: created_records)) if batch_successful? || created_records > 0
     end
 
     def batch_create_listed
@@ -168,7 +168,7 @@ module ActiveScaffold::Actions
         @error_records = {}
         processed_records = created_records = 0
         params[:record].each do |scope, record_hash|
-          do_create(:attributes => record_hash, :skip_save => validate_first?)
+          do_create(attributes: record_hash, skip_save: validate_first?)
           error_records[scope] = @record unless successful? && !run_in_transaction?
           created_records += 1 if successful?
           processed_records += 1
@@ -220,7 +220,7 @@ module ActiveScaffold::Actions
           @batch_create_by_records = batch_values_for_column(column, attributes[column.name])
         else
           value = column_value_from_param_value(parent_record, column, attributes[column.name])
-          values[column.name] = {:column => column, :value => value}
+          values[column.name] = {column: column, value: value}
         end
       end
       values
@@ -237,7 +237,7 @@ module ActiveScaffold::Actions
     # The default security delegates to ActiveRecordPermissions.
     # You may override the method to customize.
     def batch_create_authorized?(record = nil)
-      authorized_for?(:crud_type => :create)
+      authorized_for?(crud_type: :create)
     end
 
     def batch_create_ignore?(record = nil)

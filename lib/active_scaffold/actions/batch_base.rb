@@ -62,10 +62,10 @@ module ActiveScaffold::Actions
     end
 
     def authorized_for_job?(record)
-      if record.authorized_for?(:crud_type => active_scaffold_config.send(action_name).crud_type)
+      if record.authorized_for?(crud_type: active_scaffold_config.send(action_name).crud_type)
         true
       else
-        record.errors.add(:base, as_(:no_authorization_for_action, :action => action_name))
+        record.errors.add(:base, as_(:no_authorization_for_action, action: action_name))
         error_records << record
         false
       end
@@ -82,7 +82,7 @@ module ActiveScaffold::Actions
         if params[:iframe]=='true' # was this an iframe post ?
           do_refresh_list
           responds_to_parent do
-            render :action => 'on_batch_base.js', :layout => false
+            render action: 'on_batch_base.js', layout: false
           end
         else # just a regular post
           flash[:info] = as_(:batch_processing_successful) if batch_successful?
@@ -96,7 +96,7 @@ module ActiveScaffold::Actions
         send("#{action_name}_respond_to_js")
       else  
         do_refresh_list
-        render :action => "on_batch_base"
+        render action: "on_batch_base"
       end
     end
 
@@ -104,7 +104,7 @@ module ActiveScaffold::Actions
       if respond_to? "#{action_name}_respond_to_xml", true
         send("#{action_name}_respond_to_xml")
       else
-        render :xml => response_object.to_xml(:only => active_scaffold_config.send(action_name).columns.visible_columns_names), :content_type => Mime::XML, :status => response_status
+        response_to_api(:xml, active_scaffold_config.send(action_name).columns.visible_columns_names)
       end
     end
 
@@ -112,15 +112,7 @@ module ActiveScaffold::Actions
       if respond_to? "#{action_name}_respond_to_json", true
         send("#{action_name}_respond_to_json")
       else
-        render :text => response_object.to_json(:only => active_scaffold_config.send(action_name).columns.visible_columns_names), :content_type => Mime::JSON, :status => response_status
-      end
-    end
-
-    def batch_base_respond_to_yaml
-      if respond_to? "#{action_name}_respond_to_yaml", true
-        send("#{action_name}_respond_to_yaml")
-      else
-        render :text => Hash.from_xml(response_object.to_xml(:only => active_scaffold_config.send(action_name).columns.visible_columns_names)).to_yaml, :content_type => Mime::YAML, :status => response_status
+        response_to_api(:json, active_scaffold_config.send(action_name).columns.visible_columns_names)
       end
     end
 

@@ -32,42 +32,49 @@ module ActiveScaffold
       end
 
       def active_scaffold_update_generic_operators_select(column, options)
-        current = {:operator => 'NO_UPDATE'}
+        current = {operator: 'NO_UPDATE'}
         current.merge!(batch_update_values[column.name][:value].symbolize_keys) if batch_update_values.dig(column.name, :value)
         select_tag("record[#{column.name}][operator]",
-              options_for_select(active_scaffold_update_generic_operators(column), current[:operator]),
-              :id => "#{options[:id]}_operator",
-              :class => "as_batch_update_operator text_input")
+                   options_for_select(active_scaffold_update_generic_operators(column), current[:operator]),
+                   id: "#{options[:id]}_operator",
+                   class: "as_batch_update_operator text_input")
       end
 
       def active_scaffold_update_numeric(column, options)
-        current = {:value => nil, :opt => 'ABSOLUTE', :operator => 'NO_UPDATE'}
+        current = {value: nil, opt: 'ABSOLUTE', operator: 'NO_UPDATE'}
         current.merge!(batch_update_values[column.name][:value].symbolize_keys) if batch_update_values[column.name] && batch_update_values[column.name][:value]
         operator_options = active_scaffold_update_generic_operators(column) + ActiveScaffold::Actions::BatchUpdate::NumericOperators.collect {|comp| [as_(comp.downcase.to_sym), comp]}
         select_options = ActiveScaffold::Actions::BatchUpdate::NumericOptions.collect {|comp| [as_(comp.downcase.to_sym), comp]}
+        style = current[:operator] == 'NO_UPDATE' ? 'display: none;' : nil
         html = select_tag("record[#{column.name}][operator]",
-              options_for_select(operator_options, current[:operator]),
-              :id => "#{options[:id]}_operator",
-              :class => "as_update_numeric_option")
-        html << ' ' << text_field_tag("record[#{column.name}][value]", current[:value], active_scaffold_input_text_options)
+                          options_for_select(operator_options, current[:operator]),
+                          id: "#{options[:id]}_operator",
+                          class: "as_update_numeric_option")
+        html << ' ' << text_field_tag("record[#{column.name}][value]", current[:value], active_scaffold_input_text_options.merge(style: style))
         html << ' ' << select_tag("record[#{column.name}][opt]",
-              options_for_select(select_options, current[:opt]),
-              :id => "#{options[:id]}_opt",
-              :class => "as_update_numeric_option")
+                                  options_for_select(select_options, current[:opt]),
+                                  id: "#{options[:id]}_opt",
+                                  class: "as_update_numeric_option",
+                                  style: style)
         html
       end
       alias_method :active_scaffold_update_integer, :active_scaffold_update_numeric
       alias_method :active_scaffold_update_decimal, :active_scaffold_update_numeric
       alias_method :active_scaffold_update_float, :active_scaffold_update_numeric
+      alias_method :active_scaffold_update_number, :active_scaffold_update_numeric
 
       def active_scaffold_update_scope_select(select_options = active_scaffold_update_scope_select_options)
-        if select_options.length > 1
+        if active_scaffold_update_scope_select_hidden?(select_options)
+          hidden_field_tag("batch_scope", select_options.first[1]) unless select_options.empty?
+        else
           select_tag("batch_scope",
                      options_for_select(select_options, batch_scope || select_options.last[1]),
-                     :class => "text_input")
-        else
-          hidden_field_tag("batch_scope", select_options.first[1]) unless select_options.empty?
+                     class: "text_input")
         end
+      end
+
+      def active_scaffold_update_scope_select_hidden?(select_options = active_scaffold_update_scope_select_options)
+        select_options.length < 2
       end
 
       def active_scaffold_update_scope_select_options

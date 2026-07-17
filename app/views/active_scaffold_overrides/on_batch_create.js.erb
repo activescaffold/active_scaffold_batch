@@ -1,15 +1,15 @@
-<% form_selector = "#{element_form_id(:action => :batch_create)}" %>
+<% form_selector = "#{element_form_id(action: :batch_create)}" %>
 
 <% if controller.send :batch_successful? %>
   <% called_by_controller = params.delete(:batch_create_by) %>
   <% if called_by_controller.nil? %>
-    ActiveScaffold.replace_html('<%= active_scaffold_content_id %>','<%= escape_javascript(render(:partial => 'list', :layout => false)) %>');
+    ActiveScaffold.replace_html('<%= active_scaffold_content_id %>', '<%= escape_javascript(render('list')) %>');
   <% else %>
-    ActiveScaffold.mark_records('<%= "#{controller_id(called_by_controller)}-tbody" %>', <%= {:checked => false, :include_checkboxes => true}.to_json.html_safe %>);
+    ActiveScaffold.mark_records('<%= "#{controller_id(called_by_controller)}-tbody" %>', <%= {checked: false, include_checkboxes: true}.to_json.html_safe %>);
   <% end %>
   ActiveScaffold.find_action_link('<%= form_selector %>').close();
 <% else %>
-  ActiveScaffold.find_action_link('<%= form_selector %>').update_flash_messages('<%= escape_javascript(render(:partial => 'messages')) %>');
-  ActiveScaffold.replace('<%= form_selector %>', '<%= escape_javascript(render(:partial => 'batch_create_form', :locals => {:xhr => true})) %>');
+  ActiveScaffold.find_action_link('<%= form_selector %>').update_flash_messages('<%= escape_javascript(render('messages')) %>');
+  ActiveScaffold.replace('<%= form_selector %>', '<%= escape_javascript(render('batch_create_form', {xhr: true})) %>');
   ActiveScaffold.scroll_to('<%= form_selector %>', true);
 <% end %>

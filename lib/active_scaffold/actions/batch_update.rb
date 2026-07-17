@@ -23,7 +23,7 @@ module ActiveScaffold::Actions
     
     def self.included(base)
       base.send :include, ActiveScaffold::Actions::BatchBase unless base < ActiveScaffold::Actions::BatchBase
-      base.before_action :batch_update_authorized_filter, :only => [:batch_edit, :batch_update]
+      base.before_action :batch_update_authorized_filter, only: [:batch_edit, :batch_update]
       base.helper_method :batch_update_values
     end
 
@@ -40,14 +40,14 @@ module ActiveScaffold::Actions
     protected
     def batch_edit_respond_to_html
       if batch_successful?
-        render(:action => 'batch_update')
+        render(action: 'batch_update')
       else
         return_to_main
       end
     end
 
     def batch_edit_respond_to_js
-      render(:partial => 'batch_update_form')
+      render(partial: 'batch_update_form')
     end
 
     def batch_update_values
@@ -59,14 +59,14 @@ module ActiveScaffold::Actions
         flash[:info] = as_(:batch_processing_successful) if batch_successful?
         do_refresh_list
         responds_to_parent do
-          render :action => 'on_batch_update.js', :layout => false
+          render action: 'on_batch_update.js', layout: false
         end
       else # just a regular post
         if batch_successful?
-          flash[:info] = as_(:updated_model, :model => @record.to_label)
+          flash[:info] = as_(:updated_model, model: @record.to_label)
           return_to_main
         else
-          render(:action => 'batch_update')
+          render(action: 'batch_update')
         end
       end
     end
@@ -74,7 +74,7 @@ module ActiveScaffold::Actions
     def batch_update_respond_to_js
       flash[:info] = as_(:batch_processing_successful) if batch_successful?
       do_refresh_list
-      render :action => 'on_batch_update'
+      render action: 'on_batch_update'
     end
 
     def do_batch_edit
@@ -139,7 +139,7 @@ module ActiveScaffold::Actions
         set_record_attribute(value[:column], attribute, value[:value])
       end
       
-      update_save(:no_record_param_update => true)
+      update_save(no_record_param_update: true)
       if successful?
         @record.as_marked = false if batch_scope == 'MARKED'
       else
@@ -178,7 +178,7 @@ module ActiveScaffold::Actions
         next unless params_hash?(attributes[column.name]) && attributes[column.name][:operator] != 'NO_UPDATE'
         value = attributes[column.name]
         value[:value] = value[:operator] == 'NULL' ? nil : column_value_from_param_value(nil, column, value[:value])
-        values[column.name] = {:column => column, :value => value}
+        values[column.name] = {column: column, value: value}
       end
       values
     end
@@ -186,7 +186,7 @@ module ActiveScaffold::Actions
     # The default security delegates to ActiveRecordPermissions.
     # You may override the method to customize.
     def batch_update_authorized?(record = nil)
-      authorized_for?(:crud_type => :update)
+      authorized_for?(crud_type: :update)
     end
 
     def batch_update_ignore?(record = nil)

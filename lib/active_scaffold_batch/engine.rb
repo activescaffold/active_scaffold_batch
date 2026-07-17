@@ -10,7 +10,7 @@ module ActiveScaffoldBatch
         #not working because routing picks show route instead
         #self::ACTIVE_SCAFFOLD_CORE_ROUTING[:collection][:batch_destroy] = :get
         #you may define a route for your controller before resource routes
-        #match 'players/batch_destroy' => 'players#batch_destroy', :via => [:get]
+        #match 'players/batch_destroy' => 'players#batch_destroy', via: [:get]
         self::ACTIVE_SCAFFOLD_CORE_ROUTING[:collection][:batch_destroy] = :delete
       end
     end

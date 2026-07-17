@@ -3,7 +3,7 @@ module ActiveScaffold::Actions
 
     def self.included(base)
       base.send :include, ActiveScaffold::Actions::BatchBase unless base < ActiveScaffold::Actions::BatchBase
-      base.before_action :batch_destroy_authorized_filter, :only => [:batch_destroy]
+      base.before_action :batch_destroy_authorized_filter, only: [:batch_destroy]
     end
 
     def batch_destroy
@@ -60,7 +60,7 @@ module ActiveScaffold::Actions
     # The default security delegates to ActiveRecordPermissions.
     # You may override the method to customize.
     def batch_destroy_authorized?(record = nil)
-      authorized_for?(:crud_type => :delete)
+      authorized_for?(crud_type: :delete)
     end
 
     def batch_destroy_marked_ignore?(record = nil)
