@@ -1,4 +1,8 @@
 <span class='batch-create-rows'>
-  <%= as_(:add_some_records, model: active_scaffold_config.label(count: 2), number_input: text_field_tag(:num_records, 1, id: nil)).html_safe %>
+  <%
+    number_attributes = active_scaffold_batch_control_attributes(nil, :number, :batch_create_row_count, id: nil)
+    number_input = text_field_tag(:num_records, 1, active_scaffold_input_text_options(number_attributes))
+  %>
+  <%= as_(:add_some_records, model: active_scaffold_config.label(count: 2), number_input: number_input).html_safe %>
   <%= link_to as_(:add), params_for(action: :batch_add), as_element_attributes(:batch_create_add_rows, remote: true) %>
 </span>
