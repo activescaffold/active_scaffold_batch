@@ -23,3 +23,4 @@ end
 
 ActiveScaffold.stylesheets << 'active_scaffold_batch'
 ActiveScaffold.javascripts << 'active_scaffold_batch'
+ActiveScaffold.set_element :batch_create_add_rows, attributes: {}
