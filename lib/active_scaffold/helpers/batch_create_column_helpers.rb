@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ActiveScaffold
   module Helpers
     # Helpers that assist with the rendering of a Form Column
@@ -9,18 +11,24 @@ module ActiveScaffold
 
         ui_options = column.form_ui_options || column.options
         if column.form_ui == :record_select
-          active_scaffold_record_select(options[:object], column, options, batch_create_by_records, true, ui_options: ui_options)
+          active_scaffold_record_select(options[:object], column, options, batch_create_by_records, true,
+                                        ui_options: ui_options)
         elsif column.association
           active_scaffold_batch_create_singular_association(column, options, ui_options: ui_options)
         else
-          text_area_tag(column.name, params[:record] ? params[:record][column.name] : '', options.merge(column.options[:html_options] || {}))
+          text_area_tag(column.name, params[:record] ? params[:record][column.name] : '',
+                        options.merge(column.options[:html_options] || {}))
         end
-
       end
 
       def active_scaffold_batch_create_singular_association(column, html_options, ui_options: column.options)
-        associated_options = batch_create_by_records.collect {|r| r.id}
-        active_scaffold_input_singular_association(column, html_options.merge(multiple: true, associated: associated_options), {include_blank: false}, ui_options: ui_options)
+        associated_options = batch_create_by_records.collect(&:id)
+        active_scaffold_input_singular_association(
+          column,
+          html_options.merge(multiple: true, associated: associated_options),
+          {include_blank: false},
+          ui_options: ui_options
+        )
       end
 
       def batch_create_multiple_layout
@@ -30,6 +38,7 @@ module ActiveScaffold
       def current_form_columns(record, scope, subform_controller = nil)
         columns = super
         return columns if columns
+
         if %i[batch_new batch_create].include? action_name.to_sym
           active_scaffold_config.batch_create.columns.visible_columns_names
         elsif %i[batch_edit batch_update].include? action_name.to_sym

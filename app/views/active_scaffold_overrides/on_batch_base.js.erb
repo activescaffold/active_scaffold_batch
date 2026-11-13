@@ -2,9 +2,19 @@
 if @error_records.empty?
   flash[:info] = as_(:batch_processing_successful) if flash[:info].blank?
 else
-  flash[:error] = @error_records.collect do |_, record|
-    active_scaffold_error_messages_for(record, object_name: "#{record.class.model_name.human.downcase}#{record.new_record? ? '' : ": #{record.to_label}"}", header_message: '', message: "#{record.class.model_name.human.downcase}#{record.new_record? ? '' : ": #{record.to_label}"}", container_tag: nil, list_type: :br)
-  end.join.html_safe
+  messages = @error_records.collect do |_, record|
+    record_name = record.class.model_name.human.downcase
+    record_name += ": #{record.to_label}" unless record.new_record?
+    active_scaffold_error_messages_for(
+      record,
+      object_name: record_name,
+      header_message: '',
+      message: record_name,
+      container_tag: nil,
+      list_type: :br
+    )
+  end
+  flash[:error] = safe_join(messages)
 end
 %>
 ActiveScaffold.replace_html('<%= active_scaffold_content_id%>', '<%=escape_javascript(render('list'))%>');

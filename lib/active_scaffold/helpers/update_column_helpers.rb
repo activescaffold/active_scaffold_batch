@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ActiveScaffold
   module Helpers
     # Helpers that assist with the rendering of a Form Column
@@ -12,19 +14,24 @@ module ActiveScaffold
         if (method = override_update_field(column))
           send(method, options[:object], options)
         # second, check if the dev has specified a valid form_ui for this column, using specific ui for searches
-        elsif column.form_ui and (method = override_update(column.form_ui))
-          send(method, column, options)
-       elsif column.column and column.form_ui.nil? and (method = override_update(column.column.type))
+        elsif (update_ui = column.form_ui || column.column&.type) && (method = override_update(update_ui))
           send(method, column, options)
         else
           show_field = batch_update_values.dig(column.name, :value, :operator) == 'REPLACE'
-          active_scaffold_update_generic_operators_select(column, options) << ' ' <<
-            active_scaffold_render_input(column, options.merge(name: "record[#{column.name}][value]", style: ('display: none;' unless show_field)))
+          input_options = options.merge(
+            name: "record[#{column.name}][value]",
+            style: ('display: none;' unless show_field)
+          )
+          html = [
+            active_scaffold_update_generic_operators_select(column, options),
+            active_scaffold_render_input(column, input_options)
+          ]
+          safe_join html, ' '
         end
       end
 
       def active_scaffold_update_generic_operators(column)
-        operators = ActiveScaffold::Actions::BatchUpdate::GenericOperators.collect {|comp| [as_(comp.downcase.to_sym), comp]}
+        operators = active_scaffold_update_options_for(ActiveScaffold::Actions::BatchUpdate::GENERIC_OPERATORS)
         if column.column.nil? || column.column.null
           operators << [as_(:null), 'NULL']
         end
@@ -32,12 +39,9 @@ module ActiveScaffold
       end
 
       def active_scaffold_update_generic_operators_select(column, options)
-        current = {operator: 'NO_UPDATE'}
-        current.merge!(batch_update_values[column.name][:value].symbolize_keys) if batch_update_values.dig(column.name, :value)
-        attributes = active_scaffold_batch_control_attributes(
-          column, :select, :batch_update_operator,
-          id: "#{options[:id]}_operator",
-          class: 'as_batch_update_operator text-input'
+        current = active_scaffold_update_values(column, operator: 'NO_UPDATE')
+        attributes = active_scaffold_update_operator_attributes(
+          column, options, 'as_batch_update_operator text-input'
         )
         select_tag("record[#{column.name}][operator]",
                    options_for_select(active_scaffold_update_generic_operators(column), current[:operator]),
@@ -45,48 +49,68 @@ module ActiveScaffold
       end
 
       def active_scaffold_update_numeric(column, options)
-        current = {value: nil, opt: 'ABSOLUTE', operator: 'NO_UPDATE'}
-        current.merge!(batch_update_values[column.name][:value].symbolize_keys) if batch_update_values[column.name] && batch_update_values[column.name][:value]
-        operator_options = active_scaffold_update_generic_operators(column) + ActiveScaffold::Actions::BatchUpdate::NumericOperators.collect {|comp| [as_(comp.downcase.to_sym), comp]}
-        select_options = ActiveScaffold::Actions::BatchUpdate::NumericOptions.collect {|comp| [as_(comp.downcase.to_sym), comp]}
+        current = active_scaffold_update_values(column, value: nil, opt: 'ABSOLUTE', operator: 'NO_UPDATE')
+        operator_options = active_scaffold_update_generic_operators(column) +
+                           active_scaffold_update_options_for(ActiveScaffold::Actions::BatchUpdate::NUMERIC_OPERATORS)
+        numeric_options = active_scaffold_update_options_for(ActiveScaffold::Actions::BatchUpdate::NUMERIC_OPTIONS)
         style = current[:operator] == 'NO_UPDATE' ? 'display: none;' : nil
-        operator_attributes = active_scaffold_batch_control_attributes(
-          column, :select, :batch_update_operator,
-          id: "#{options[:id]}_operator",
-          class: 'as_update_numeric_option'
-        )
-        value_attributes = active_scaffold_batch_control_attributes(
+        operator_attributes, value_attributes, option_attributes =
+          active_scaffold_update_numeric_attributes(column, options, style)
+
+        name = "record[#{column.name}]"
+        controls = [
+          select_tag(
+            "#{name}[operator]", options_for_select(operator_options, current[:operator]), operator_attributes
+          ),
+          text_field_tag("#{name}[value]", current[:value], value_attributes),
+          select_tag("#{name}[opt]", options_for_select(numeric_options, current[:opt]), option_attributes)
+        ]
+        safe_join(controls, ' ')
+      end
+
+      def active_scaffold_update_numeric_attributes(column, options, style)
+        operator = active_scaffold_update_operator_attributes(column, options, 'as_update_numeric_option')
+        value = active_scaffold_batch_control_attributes(
           column, column.form_ui || column.column&.type, :batch_update_value,
           id: "#{options[:id]}_value",
           style: style
         )
-        value_attributes = active_scaffold_input_text_options(value_attributes)
-        option_attributes = active_scaffold_batch_control_attributes(
+        numeric_option = active_scaffold_batch_control_attributes(
           column, :select, :batch_update_numeric_option,
           id: "#{options[:id]}_opt",
           class: 'as_update_numeric_option',
           style: style
         )
-        html = select_tag("record[#{column.name}][operator]",
-                          options_for_select(operator_options, current[:operator]),
-                          operator_attributes)
-        html << ' ' << text_field_tag("record[#{column.name}][value]", current[:value], value_attributes)
-        html << ' ' << select_tag("record[#{column.name}][opt]",
-                                  options_for_select(select_options, current[:opt]),
-                                  option_attributes)
-        html
+        [operator, active_scaffold_input_text_options(value), numeric_option]
       end
-      alias_method :active_scaffold_update_integer, :active_scaffold_update_numeric
-      alias_method :active_scaffold_update_decimal, :active_scaffold_update_numeric
-      alias_method :active_scaffold_update_float, :active_scaffold_update_numeric
-      alias_method :active_scaffold_update_number, :active_scaffold_update_numeric
+
+      def active_scaffold_update_values(column, defaults)
+        values = batch_update_values.dig(column.name, :value)
+        values ? defaults.merge(values.symbolize_keys) : defaults
+      end
+
+      def active_scaffold_update_options_for(values)
+        values.map { |value| [as_(value.downcase.to_sym), value] }
+      end
+
+      def active_scaffold_update_operator_attributes(column, options, css_class)
+        active_scaffold_batch_control_attributes(
+          column, :select, :batch_update_operator,
+          id: "#{options[:id]}_operator",
+          class: css_class
+        )
+      end
+      alias active_scaffold_update_integer active_scaffold_update_numeric
+      alias active_scaffold_update_decimal active_scaffold_update_numeric
+      alias active_scaffold_update_float active_scaffold_update_numeric
+      alias active_scaffold_update_number active_scaffold_update_numeric
 
       def active_scaffold_update_scope_select(select_options = active_scaffold_update_scope_select_options)
         if active_scaffold_update_scope_select_hidden?(select_options)
-          hidden_field_tag("batch_scope", select_options.first[1]) unless select_options.empty?
+          hidden_field_tag('batch_scope', select_options.first[1]) unless select_options.empty?
         else
           attributes = active_scaffold_batch_control_attributes(nil, :select, :batch_scope, class: 'text-input')
-          select_tag("batch_scope",
+          select_tag('batch_scope',
                      options_for_select(select_options, batch_scope || select_options.last[1]),
                      attributes)
         end

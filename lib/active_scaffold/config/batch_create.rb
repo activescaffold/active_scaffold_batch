@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ActiveScaffold::Config
   class BatchCreate < ActiveScaffold::Config::Form
     self.crud_type = :create
@@ -13,37 +15,33 @@ module ActiveScaffold::Config
     # global level configuration
     # --------------------------
     # the ActionLink for this action
-    def self.link
-      @@link
-    end
-    def self.link=(val)
-      @@link = val
-    end
-    @@link = ActiveScaffold::DataStructures::ActionLink.new('batch_new', label: :create, type: :collection, security_method: :batch_create_authorized?, ignore_method: :batch_create_ignore?)
+    cattr_accessor :link,
+                   instance_accessor: false,
+                   default: ActiveScaffold::DataStructures::ActionLink.new(
+                     'batch_new', label: :create, type: :collection,
+                                  security_method: :batch_create_authorized?, ignore_method: :batch_create_ignore?
+                   )
 
     # configures where the plugin itself is located. there is no instance version of this.
-    cattr_accessor :plugin_directory
-    @@plugin_directory = File.expand_path(__FILE__).match(%{(^.*)/lib/active_scaffold/config/batch_create.rb})[1]
+    cattr_accessor :plugin_directory,
+                   instance_accessor: false,
+                   default: File.expand_path(__FILE__).match(%r{(^.*)/lib/active_scaffold/config/batch_create.rb})[1]
 
     # configures how batch create should be processed
     # :create => standard activerecord create including validations
-    cattr_accessor :process_mode
-    @@process_mode = :create
+    cattr_accessor :process_mode, instance_accessor: false, default: :create
 
     # you may update all records in list view or all marked records
     # you might disable list mode with this switch if you think it is
     # too "dangerous"
-    cattr_accessor :list_mode_enabled
-    @@list_mode_enabled = true
+    cattr_accessor :list_mode_enabled, instance_accessor: false, default: true
 
     # run all create statements in a transaction, so no record is created
     # if someone fails
-    cattr_accessor :run_in_transaction
-    @@run_in_transaction = true
+    cattr_accessor :run_in_transaction, instance_accessor: false, default: true
 
     # layout for create multiple records
-    cattr_accessor :layout
-    @@layout = :vertical
+    cattr_accessor :layout, instance_accessor: false, default: :vertical
 
     # instance-level configuration
     # ----------------------------

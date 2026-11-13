@@ -1,5 +1,18 @@
-<% html = ''.html_safe -%>
+<% rows = [] -%>
 <% @records.each do |scope, record| -%>
-<% html << render("#{batch_create_multiple_layout}_record", {columns: active_scaffold_config.batch_create.columns, form_action: :batch_create, scope: "[#{scope}]", first: false, record: record}) %>
+<%
+  record_locals = {
+    columns: active_scaffold_config.batch_create.columns,
+    form_action: :batch_create,
+    scope: "[#{scope}]",
+    first: false,
+    record: record
+  }
+  rows << render("#{batch_create_multiple_layout}_record", record_locals)
+%>
 <% end %>
-ActiveScaffold.create_associated_record_form('<%= element_form_id(action: :batch_create) %>-content', '<%= escape_javascript(html) %>', <%= {singular: false}.to_json.html_safe %>);
+ActiveScaffold.create_associated_record_form(
+  '<%= element_form_id(action: :batch_create) %>-content',
+  '<%= escape_javascript(safe_join(rows)) %>',
+  {singular: false}
+);

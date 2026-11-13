@@ -1,7 +1,7 @@
-<%= render 'base_form', {xhr: xhr ||= nil,
-                         form_action: form_action ||= :batch_update,
-                         method: method ||= :post,
-                         cancel_link: cancel_link ||= true,
+<%= render 'base_form', {xhr: local_assigns.fetch(:xhr, nil),
+                         form_action: local_assigns.fetch(:form_action, :batch_update),
+                         method: local_assigns.fetch(:method, :post),
+                         cancel_link: local_assigns.fetch(:cancel_link, true),
                          body_partial: 'batch_update_form_body',
-                         headline: headline ||= active_scaffold_config.batch_update.label} %>
+                         headline: local_assigns.fetch(:headline, active_scaffold_config.batch_update.label)} %>
 

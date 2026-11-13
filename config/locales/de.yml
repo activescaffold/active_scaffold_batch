@@ -9,7 +9,8 @@ de:
     absolute: abs
     percent: '%'
     batch_update: 'Speichern'
-    add_some_records: 'Add %{number_input} %{model}'
+    add_some_records:
+      html: 'Add %{number_input} %{model}'
     records: 'Records'
     batch_processing_successful: "Batch processing successful"
     batch: Batch

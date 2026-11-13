@@ -5,7 +5,16 @@
   -%>
   <% records.each do |scope, record| -%>
     <% @record = record %>
-    <%= render 'batch_create_form_vertical_record', {columns: columns, form_action: form_action, scope: "[#{scope}]", first: first, record: record} %>
+    <%
+      record_locals = {
+        columns: columns,
+        form_action: form_action,
+        scope: "[#{scope}]",
+        first: first,
+        record: record
+      }
+    %>
+    <%= render 'batch_create_form_vertical_record', record_locals %>
     <% first = false -%>
   <% end -%>
 </div>

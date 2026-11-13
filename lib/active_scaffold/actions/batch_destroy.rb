@@ -1,6 +1,7 @@
+# frozen_string_literal: true
+
 module ActiveScaffold::Actions
   module BatchDestroy
-
     def self.included(base)
       base.send :include, ActiveScaffold::Actions::BatchBase unless base < ActiveScaffold::Actions::BatchBase
       base.before_action :batch_destroy_authorized_filter, only: [:batch_destroy]
@@ -9,39 +10,39 @@ module ActiveScaffold::Actions
     def batch_destroy
       batch_action
     end
-    
+
     protected
 
-    def before_do_batch_destroy
-    end
+    def before_do_batch_destroy; end
 
     def batch_destroy_listed
       case active_scaffold_config.batch_destroy.process_mode
-      when :delete then
+      when :delete
         each_record_in_scope do |record|
           destroy_record(record) if authorized_for_job?(record)
         end
-      when :delete_all then
+      when :delete_all
         do_search if respond_to? :do_search, true
         # dummy condition cause we have to call delete_all on relation not on association
         filtered_query.where('1=1').delete_all(all_conditions)
       else
-        Rails.logger.error("Unknown process_mode: #{active_scaffold_config.batch_destroy.process_mode} for action batch_destroy")
+        Rails.logger.error "Unknown process_mode: #{active_scaffold_config.batch_destroy.process_mode} " \
+                           'for action batch_destroy'
       end
-      
     end
 
     def batch_destroy_marked
       case active_scaffold_config.batch_destroy.process_mode
-      when :delete then
+      when :delete
         each_marked_record do |record|
           destroy_record(record) if authorized_for_job?(record)
         end
-      when :delete_all then
+      when :delete_all
         active_scaffold_config.model.where(active_scaffold_config.model.primary_key => marked_records.to_a).delete_all
         do_demark_all
       else
-        Rails.logger.error("Unknown process_mode: #{active_scaffold_config.batch_destroy.process_mode} for action batch_destroy")
+        Rails.logger.error "Unknown process_mode: #{active_scaffold_config.batch_destroy.process_mode} " \
+                           'for action batch_destroy'
       end
     end
 
@@ -64,14 +65,14 @@ module ActiveScaffold::Actions
     end
 
     def batch_destroy_marked_ignore?(record = nil)
-      !active_scaffold_config.actions.include? :mark
+      active_scaffold_config.actions.exclude?(:mark)
     end
 
     private
 
     def batch_destroy_authorized_filter
       link = active_scaffold_config.batch_destroy.link || active_scaffold_config.batch_destroy.class.link
-      raise ActiveScaffold::ActionNotAllowed unless self.send(link.first.security_method)
+      raise ActiveScaffold::ActionNotAllowed unless send(link.first.security_method)
     end
   end
 end

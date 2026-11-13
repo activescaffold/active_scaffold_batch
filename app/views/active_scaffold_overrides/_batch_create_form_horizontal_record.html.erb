@@ -1,1 +1,12 @@
-<%= render 'form_association_record', scope: scope, column: nil, parent_record: nil, columns: columns, layout: :horizontal, locked: first, record: record %>
+<%
+  association_locals = {
+    scope: scope,
+    column: nil,
+    parent_record: nil,
+    columns: columns,
+    layout: :horizontal,
+    locked: first,
+    record: record
+  }
+%>
+<%= render 'form_association_record', association_locals %>

@@ -1,9 +1,10 @@
+# frozen_string_literal: true
+
 module ActiveScaffold::Actions
   module BatchCreate
-
     def self.included(base)
       base.send :include, ActiveScaffold::Actions::BatchBase unless base < ActiveScaffold::Actions::BatchBase
-      base.before_action :batch_create_authorized_filter, only: [:batch_new, :batch_create]
+      base.before_action :batch_create_authorized_filter, only: %i[batch_new batch_create]
       base.helper_method :batch_create_values
       base.helper_method :batch_create_by_column
       base.helper_method :batch_create_by_records
@@ -23,8 +24,8 @@ module ActiveScaffold::Actions
       batch_action
     end
 
-
     protected
+
     def batch_new_respond_to_html
       if batch_successful?
         render(action: 'batch_create')
@@ -46,21 +47,20 @@ module ActiveScaffold::Actions
     end
 
     def batch_create_by_records
-      if @batch_create_by_records.nil?
-        if marked_records_parent
-          column = active_scaffold_config.columns[batch_create_by_column.to_sym]
-          @batch_create_by_records = if column.association.polymorphic?
+      if @batch_create_by_records.nil? && marked_records_parent
+        column = active_scaffold_config.columns[batch_create_by_column.to_sym]
+        @batch_create_by_records =
+          if column.association.polymorphic?
             active_scaffold_config_for(params[:batch_create_by].singularize).model.find(marked_records_parent.keys)
           else
             column_plural_assocation_value_from_value(column, marked_records_parent.keys)
           end
-        end
       end
       @batch_create_by_records || []
     end
 
     def batch_create_respond_to_html
-      if params[:iframe]=='true' # was this an iframe post ?
+      if params[:iframe] == 'true' # was this an iframe post ?
         do_refresh_list
         responds_to_parent do
           render action: 'on_batch_create.js', layout: false
@@ -99,12 +99,13 @@ module ActiveScaffold::Actions
 
     def marked_records_parent
       if @marked_records_parent.nil?
-        @marked_records_parent = if params[:batch_create_by]
-          session_parent = active_scaffold_session_storage(params[:batch_create_by])
-          session_parent['marked_records'] || {}
-        else
-          false
-        end
+        @marked_records_parent =
+          if params[:batch_create_by]
+            session_parent = active_scaffold_session_storage(params[:batch_create_by])
+            session_parent['marked_records'] || {}
+          else
+            false
+          end
       end
       @marked_records_parent
     end
@@ -142,26 +143,33 @@ module ActiveScaffold::Actions
       else
         processed_records, created_records = yield
       end
-      flash[:info] = as_(:some_records_created, count: created_records, model: active_scaffold_config.label(count: created_records)) if batch_successful? || created_records > 0
+      return unless batch_successful? || created_records.positive?
+
+      flash[:info] = as_(
+        :some_records_created,
+        count: created_records,
+        model: active_scaffold_config.label(count: created_records)
+      )
     end
 
     def batch_create_listed
       run_in_transaction_if_enabled do
         processed_records = created_records = 0
         case active_scaffold_config.batch_create.process_mode
-        when :create then
+        when :create
           batch_create_by_records.each do |batch_record|
             create_record_in_batch(batch_record)
             created_records += 1 if successful?
             processed_records += 1
           end
         else
-          Rails.logger.error("Unknown process_mode: #{active_scaffold_config.batch_create.process_mode} for action batch_create")
+          Rails.logger.error "Unknown process_mode: #{active_scaffold_config.batch_create.process_mode} for " \
+                             'action batch_create'
         end
         [processed_records, created_records]
       end
     end
-    alias_method :batch_create_marked, :batch_create_listed
+    alias batch_create_marked batch_create_listed
 
     def batch_create_multiple
       run_in_transaction_if_enabled do
@@ -182,29 +190,53 @@ module ActiveScaffold::Actions
     end
 
     def create_record_in_batch(created_by)
+      prepare_batch_create_record(created_by)
+      return unless authorized_for_job?(@record)
+
+      validate_or_save_batch_create_record
+      finalize_batch_create_record(created_by)
+    end
+
+    def prepare_batch_create_record(created_by)
       @successful = nil
       @record = new_batch_create_record(created_by)
       @record.send("#{batch_create_by_column}=", created_by)
       batch_create_values.each do |attribute, value|
         set_record_attribute(value[:column], attribute, value[:value])
       end
+    end
 
-      if authorized_for_job?(@record)
-        if validate_first?
-          self.successful = [@record.valid?, @record.associated_valid?].all?
-        else
-          create_save(@record) rescue nil
-          self.successful = @record.persisted?
-        end
-        if successful?
-          marked_records_parent.delete(created_by.id.to_s) if batch_scope == 'MARKED' && marked_records_parent
-        elsif @record.errors[batch_create_by_column]
-          new_errors = @record.errors.messages[batch_create_by_column].map { |e| "#{@record.send(batch_create_by_column)} #{e}" }
-          @record.errors.delete(batch_create_by_column)
-          new_errors.each { |error| @record.errors.add batch_create_by_column, error }
-        end
-        error_records << @record unless successful? && !run_in_transaction?
+    def validate_or_save_batch_create_record
+      if validate_first?
+        self.successful = [@record.valid?, @record.associated_valid?].all?
+      else
+        save_batch_create_record
       end
+    end
+
+    def save_batch_create_record
+      create_save(@record)
+      self.successful = @record.persisted?
+    rescue ActiveRecord::ActiveRecordError => e
+      @record.errors.add(:base, e.message) if @record.errors.empty?
+      self.successful = false
+    end
+
+    def finalize_batch_create_record(created_by)
+      if successful?
+        marked_records_parent.delete(created_by.id.to_s) if batch_scope == 'MARKED' && marked_records_parent
+      else
+        normalize_batch_create_errors
+      end
+      error_records << @record unless successful? && !run_in_transaction?
+    end
+
+    def normalize_batch_create_errors
+      new_errors = @record.errors.messages[batch_create_by_column].map do |error|
+        "#{@record.send(batch_create_by_column)} #{error}"
+      end
+      @record.errors.delete(batch_create_by_column)
+      new_errors.each { |error| @record.errors.add batch_create_by_column, error }
     end
 
     def batch_create_by_column
@@ -215,7 +247,8 @@ module ActiveScaffold::Actions
       values = {}
       parent_record = active_scaffold_config.model.new
       columns.each_column(for: active_scaffold_config.model, crud_type: :create, flatten: true) do |column|
-        next unless attributes.has_key?(column.name)
+        next unless attributes.key?(column.name)
+
         if column == batch_create_by_column.to_sym
           @batch_create_by_records = batch_values_for_column(column, attributes[column.name])
         else
@@ -257,8 +290,9 @@ module ActiveScaffold::Actions
 
     def batch_create_authorized_filter
       link = active_scaffold_config.batch_create.link || active_scaffold_config.batch_create.class.link
-      raise ActiveScaffold::ActionNotAllowed unless self.send(link.security_method)
+      raise ActiveScaffold::ActionNotAllowed unless send(link.security_method)
     end
+
     def batch_new_formats
       (default_formats + active_scaffold_config.formats).uniq
     end

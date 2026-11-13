@@ -4,7 +4,7 @@
   ol_attrs[:style] = 'display: none;' if columns.collapsed
 %>
 <%= as_element :fields_container, class: 'form', **ol_attrs do %>
-  <%= as_element :form_element, hidden_field_tag("batch_scope", (batch_scope || 'LISTED')) %>
+  <%= as_element :form_element, hidden_field_tag('batch_scope', batch_scope || 'LISTED') %>
 
   <% columns.each_column(for: @record) do |column| %>
     <% next unless column.association.nil? || column.association.belongs_to? %>

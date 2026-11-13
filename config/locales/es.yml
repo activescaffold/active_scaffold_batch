@@ -9,7 +9,8 @@ es:
     absolute: abs
     percent: '%'
     batch_update: 'Actualizar Lote'
-    add_some_records: 'Añadir %{number_input} %{model}'
+    add_some_records:
+      html: 'Añadir %{number_input} %{model}'
     records: 'Registros'
     batch_processing_successful: "Proceso en lote realizado correctamente"
     batch: Lote

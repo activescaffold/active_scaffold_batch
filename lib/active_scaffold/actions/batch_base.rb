@@ -1,6 +1,7 @@
+# frozen_string_literal: true
+
 module ActiveScaffold::Actions
   module BatchBase
-
     def self.included(base)
       base.helper_method :batch_scope
     end
@@ -15,7 +16,7 @@ module ActiveScaffold::Actions
 
     def batch_scope
       if @batch_scope.nil? && params[:batch_scope]
-        @batch_scope = params[:batch_scope] if ['LISTED', 'MARKED'].include?(params[:batch_scope])
+        @batch_scope = params[:batch_scope] if %w[LISTED MARKED].include?(params[:batch_scope])
         params.delete :batch_scope
       end
       @batch_scope
@@ -47,7 +48,9 @@ module ActiveScaffold::Actions
       do_new
       send("#{action_name}_values").each do |attribute, value|
         form_ui = column_form_ui(value[:column])
-        set_record_attribute(value[:column], attribute, value[:value]) unless form_ui && send("override_#{action_name}_value", form_ui)
+        unless form_ui && send("override_#{action_name}_value", form_ui)
+          set_record_attribute(value[:column], attribute, value[:value])
+        end
       end
     end
 
@@ -57,7 +60,9 @@ module ActiveScaffold::Actions
 
     def process_batch
       send("before_do_#{action_name}")
-      send("#{action_name}_#{batch_scope.downcase}") if !batch_scope.nil? && respond_to?("#{action_name}_#{batch_scope.downcase}", true)
+      if batch_scope.present? && respond_to?("#{action_name}_#{batch_scope.downcase}", true)
+        send("#{action_name}_#{batch_scope.downcase}")
+      end
       prepare_error_record unless batch_successful?
     end
 
@@ -72,31 +77,29 @@ module ActiveScaffold::Actions
     end
 
     def temporary_id
-      (Time.now.to_f*1000).to_i.to_s
+      (Time.now.to_f * 1000).to_i.to_s
     end
 
     def batch_base_respond_to_html
       if respond_to? "#{action_name}_respond_to_html", true
         send("#{action_name}_respond_to_html")
-      else
-        if params[:iframe]=='true' # was this an iframe post ?
-          do_refresh_list
-          responds_to_parent do
-            render action: 'on_batch_base.js', layout: false
-          end
-        else # just a regular post
-          flash[:info] = as_(:batch_processing_successful) if batch_successful?
-          return_to_main
+      elsif params[:iframe] == 'true'
+        do_refresh_list
+        responds_to_parent do
+          render action: 'on_batch_base.js', layout: false
         end
+      else # just a regular post
+        flash[:info] = as_(:batch_processing_successful) if batch_successful?
+        return_to_main
       end
     end
 
     def batch_base_respond_to_js
       if respond_to? "#{action_name}_respond_to_js", true
         send("#{action_name}_respond_to_js")
-      else  
+      else
         do_refresh_list
-        render action: "on_batch_base"
+        render action: 'on_batch_base'
       end
     end
 
