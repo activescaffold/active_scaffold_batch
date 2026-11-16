@@ -174,6 +174,10 @@ class BatchCreateTest < Minitest::Test
       @rendered = options
     end
 
+    def respond_to_action(action)
+      events << [:respond_to, action]
+    end
+
     def return_to_main
       events << :return
     end
@@ -350,5 +354,25 @@ class BatchCreateTest < Minitest::Test
 
     assert_equal [:refresh], controller.events
     assert_equal({action: 'on_batch_create'}, controller.rendered)
+  end
+
+  def test_public_new_and_add_actions_process_and_respond
+    controller = Controller.new
+    controller.params[:num_records] = '2'
+
+    controller.batch_new
+    controller.batch_add
+
+    assert_includes controller.events, %i[respond_to batch_new]
+    assert_includes controller.events, %i[respond_to batch_add]
+    assert_equal 2, controller.records.size
+  end
+
+  def test_authorization_ignore_and_value_override_defaults
+    controller = Controller.new
+
+    assert controller.send(:batch_create_authorized?)
+    refute controller.send(:batch_create_ignore?)
+    assert_nil controller.send(:override_batch_create_value, :unknown)
   end
 end

@@ -4,6 +4,7 @@ require 'simplecov_json_formatter'
 
 SimpleCov.configure do
   add_filter '/test/'
+  add_filter '/version.rb'
   track_files '{app,lib}/**/*.rb'
 end
 

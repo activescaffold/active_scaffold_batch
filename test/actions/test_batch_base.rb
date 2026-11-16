@@ -96,6 +96,11 @@ class BatchBaseTest < Minitest::Test
       [:html]
     end
 
+    def process_action_link_action(action)
+      events << [:action_link, action]
+      yield
+    end
+
     public :authorized_for_job?, :batch_base_formats, :batch_base_respond_to_html,
            :batch_base_respond_to_json, :batch_base_respond_to_js, :batch_base_respond_to_xml,
            :batch_scope, :batch_successful?, :column_form_ui, :error_records,
@@ -230,5 +235,33 @@ class BatchBaseTest < Minitest::Test
 
   def test_temporary_id_is_a_numeric_string
     assert_match(/\A\d+\z/, Controller.new.temporary_id)
+  end
+
+  def test_batch_action_processes_matching_scope
+    controller = Controller.new
+    controller.params[:batch_scope] = 'LISTED'
+    controller.define_singleton_method(:before_do_batch_update) { events << :before }
+    controller.define_singleton_method(:batch_update_listed) { events << :listed }
+
+    controller.send(:batch_action, :batch_update)
+
+    assert_equal [%i[action_link batch_update], :before, :listed], controller.events
+  end
+
+  def test_action_specific_response_and_format_methods_take_precedence
+    controller = Controller.new
+    controller.define_singleton_method(:batch_update_respond_to_html) { events << :html }
+    controller.define_singleton_method(:batch_update_respond_to_js) { events << :js }
+    controller.define_singleton_method(:batch_update_respond_to_xml) { events << :xml }
+    controller.define_singleton_method(:batch_update_respond_to_json) { events << :json }
+    controller.define_singleton_method(:batch_update_formats) { [:turbo_stream] }
+
+    controller.batch_base_respond_to_html
+    controller.batch_base_respond_to_js
+    controller.batch_base_respond_to_xml
+    controller.batch_base_respond_to_json
+
+    assert_equal %i[html js xml json], controller.events
+    assert_equal [:turbo_stream], controller.batch_base_formats
   end
 end

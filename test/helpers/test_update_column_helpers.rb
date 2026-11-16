@@ -11,23 +11,25 @@ module ActiveScaffold
 end
 
 require_relative '../../lib/active_scaffold/actions/batch_update'
+require_relative '../../lib/active_scaffold/helpers/datepicker_update_column_helpers'
 require_relative '../../lib/active_scaffold/helpers/update_column_helpers'
 
 class UpdateColumnHelpersTest < Minitest::Test
   DatabaseColumn = Struct.new(:null, :type)
   Column = Struct.new(:name, :column, :form_ui)
-  BatchUpdateConfig = Struct.new(:list_mode_enabled)
+  BatchUpdateConfig = Struct.new(:list_mode_enabled, :process_mode)
   Config = Struct.new(:batch_update, :actions)
 
   class Helper
     include ActiveScaffold::Helpers::UpdateColumnHelpers
+    include ActiveScaffold::Helpers::DatepickerUpdateColumnHelpers
 
     attr_accessor :batch_values, :update_override
     attr_reader :active_scaffold_config, :attribute_calls
 
-    def initialize(listed: true, marked: true)
+    def initialize(listed: true, marked: true, process_mode: :update)
       actions = marked ? [:mark] : []
-      @active_scaffold_config = Config.new(BatchUpdateConfig.new(listed), actions)
+      @active_scaffold_config = Config.new(BatchUpdateConfig.new(listed, process_mode), actions)
       @attribute_calls = []
       @batch_values = {}
     end
@@ -83,6 +85,18 @@ class UpdateColumnHelpersTest < Minitest::Test
 
     def active_scaffold_input_text_options(attributes)
       attributes
+    end
+
+    def active_scaffold_search_date_picker_field(_column, options, value, suffix)
+      "date-picker:#{options[:name]}:#{options[:show]}:#{value}:#{suffix}"
+    end
+
+    def active_scaffold_search_datetime_trend_units(_column)
+      [%w[Days day], %w[Months month]]
+    end
+
+    def content_tag(name, content, options)
+      "<#{name} id=\"#{options[:id]}\" class=\"#{options[:class]}\" style=\"#{options[:style]}\">#{content}</#{name}>"
     end
 
     def batch_update_values
@@ -188,5 +202,48 @@ class UpdateColumnHelpersTest < Minitest::Test
     html = helper.active_scaffold_update_for(column)
 
     assert_includes html, 'record[amount][operator]'
+  end
+
+  def test_date_picker_replace_shows_date_and_hides_trend_controls
+    helper = Helper.new
+    helper.batch_values = {
+      started_on: {value: {'operator' => 'REPLACE', 'value' => '2026-11-16', 'number' => '2', 'unit' => 'day'}}
+    }
+    column = Column.new(:started_on, DatabaseColumn.new(true, :date), :date_picker)
+
+    html = helper.active_scaffold_update_date_picker(column, name: 'record[started_on]', id: 'record_started_on')
+
+    assert_includes html, 'record[started_on][operator]'
+    assert_includes html, 'date-picker:record[started_on]:true:2026-11-16:value'
+    assert_includes html, 'id="record_started_on_trend"'
+    assert_includes html, 'style="display: none"'
+  end
+
+  def test_date_picker_trend_shows_amount_and_unit_for_relative_operator
+    helper = Helper.new
+    helper.batch_values = {
+      started_on: {value: {'operator' => 'PLUS', 'number' => '3', 'unit' => 'month'}}
+    }
+    column = Column.new(:started_on, DatabaseColumn.new(false, :date), :date_picker)
+
+    html = helper.active_scaffold_update_date_picker(column, name: 'record[started_on]', id: 'record_started_on')
+
+    assert_includes html, 'date-picker:record[started_on]:false::value'
+    assert_includes html, 'text:record[started_on][number]:3'
+    assert_includes html, 'record[started_on][unit]'
+    assert_includes html, 'style=""'
+  end
+
+  def test_date_operators_depend_on_update_process_mode
+    column = Column.new(:started_on, DatabaseColumn.new(false, :date), :date_picker)
+
+    update_values = Helper.new.active_scaffold_update_date_operator_options(column).map(&:last)
+    update_all_values =
+      Helper.new(process_mode: :update_all).active_scaffold_update_date_operator_options(column).map(&:last)
+
+    assert_includes update_values, 'PLUS'
+    assert_includes update_values, 'MINUS'
+    refute_includes update_all_values, 'PLUS'
+    refute_includes update_all_values, 'MINUS'
   end
 end

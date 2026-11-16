@@ -3,38 +3,6 @@
 require 'test_helper'
 require 'active_support/core_ext/module/attribute_accessors'
 
-module ActiveScaffold
-  module DataStructures
-    class ActionLink
-      attr_reader :action, :options
-
-      def initialize(action, **options)
-        @action = action
-        @options = options
-      end
-    end
-  end
-
-  module Config
-    class Base
-      attr_accessor :action_group
-
-      def self.crud_type=(_value); end
-
-      def initialize(core)
-        @core = core
-      end
-
-      def as_(key, **options)
-        [key, options]
-      end
-    end
-
-    class Form < Base
-    end
-  end
-end
-
 require_relative '../../lib/active_scaffold/config/batch_create'
 require_relative '../../lib/active_scaffold/config/batch_destroy'
 require_relative '../../lib/active_scaffold/config/batch_update'
@@ -44,6 +12,10 @@ class BatchConfigTest < Minitest::Test
   Core = Struct.new(:actions, :create) do
     def label(count:)
       "#{count} records"
+    end
+
+    def model_id
+      :record
     end
   end
 
@@ -86,9 +58,19 @@ class BatchConfigTest < Minitest::Test
 
   def test_batch_destroy_defines_listed_and_marked_links
     links = ActiveScaffold::Config::BatchDestroy.link
-    scopes = links.map { |link| link.options.dig(:parameters, :batch_scope) }
+    scopes = links.map { |link| link.parameters[:batch_scope] }
 
     assert_equal %w[batch_destroy batch_destroy], links.map(&:action)
     assert_equal %w[LISTED MARKED], scopes
+  end
+
+  def test_create_and_update_labels_use_plural_model_name
+    create = ActiveScaffold::Config::BatchCreate.new(core)
+    update = ActiveScaffold::Config::BatchUpdate.new(core)
+    create.define_singleton_method(:as_) { |key, **options| [key, options] }
+    update.define_singleton_method(:as_) { |key, **options| [key, options] }
+
+    assert_equal [:create_model, {model: '2 records'}], create.label
+    assert_equal [:update_model, {model: '2 records'}], update.label
   end
 end

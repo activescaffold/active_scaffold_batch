@@ -68,12 +68,13 @@ class BatchDestroyTest < Minitest::Test
 
     include ActiveScaffold::Actions::BatchDestroy
 
-    attr_reader :active_scaffold_config, :demarked, :marked_records, :params
+    attr_reader :active_scaffold_config, :demarked, :marked_records, :params, :records
 
     def initialize(process_mode: :delete)
       @params = {}
       @active_scaffold_config = Config.new(ActionConfig.new(process_mode), [:mark], Model)
       @marked_records = [1, 2]
+      @records = []
     end
 
     def action_name
@@ -92,7 +93,15 @@ class BatchDestroyTest < Minitest::Test
       @demarked = true
     end
 
-    public :batch_destroy_marked, :batch_destroy_marked_ignore?, :destroy_record, :error_records
+    def each_record_in_scope(&)
+      records.each(&)
+    end
+
+    def authorized_for_job?(_record)
+      true
+    end
+
+    public :batch_destroy_listed, :batch_destroy_marked, :batch_destroy_marked_ignore?, :destroy_record, :error_records
   end
 
   def test_successful_marked_destroy_unmarks_record
@@ -130,5 +139,16 @@ class BatchDestroyTest < Minitest::Test
     controller.active_scaffold_config.actions.clear
 
     assert controller.batch_destroy_marked_ignore?
+  end
+
+  def test_listed_destroy_processes_each_record
+    controller = Controller.new
+    record = Record.new
+    controller.records << record
+
+    controller.batch_destroy_listed
+
+    assert record.as_marked
+    assert_empty controller.error_records
   end
 end
