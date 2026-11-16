@@ -22,12 +22,14 @@ class UpdateColumnHelpersTest < Minitest::Test
   class Helper
     include ActiveScaffold::Helpers::UpdateColumnHelpers
 
+    attr_accessor :batch_values, :update_override
     attr_reader :active_scaffold_config, :attribute_calls
 
     def initialize(listed: true, marked: true)
       actions = marked ? [:mark] : []
       @active_scaffold_config = Config.new(BatchUpdateConfig.new(listed), actions)
       @attribute_calls = []
+      @batch_values = {}
     end
 
     def as_(key)
@@ -53,6 +55,38 @@ class UpdateColumnHelpersTest < Minitest::Test
 
     def options_for_select(options, selected)
       "#{options.inspect}:#{selected}"
+    end
+
+    def active_scaffold_input_options(_column, _scope, options)
+      {object: :record, id: 'record_name', required: true}.merge(options)
+    end
+
+    def override_helper(*)
+      update_override
+    end
+
+    def custom_update_field(record, options)
+      "custom:#{record}:#{options[:id]}"
+    end
+
+    def active_scaffold_render_input(column, options)
+      "input:#{column.name}:#{options[:name]}:#{options[:style]}"
+    end
+
+    def safe_join(parts, separator)
+      parts.join(separator)
+    end
+
+    def text_field_tag(name, value, attributes)
+      "text:#{name}:#{value}:#{attributes[:id]}:#{attributes[:style]}"
+    end
+
+    def active_scaffold_input_text_options(attributes)
+      attributes
+    end
+
+    def batch_update_values
+      batch_values
     end
   end
 
@@ -101,5 +135,58 @@ class UpdateColumnHelpersTest < Minitest::Test
       :form_control,
       {proc_options: {column: nil, form_ui: :select, batch_role: :batch_scope}, class: 'text-input'}
     ]
+  end
+
+  def test_update_field_override_takes_precedence
+    helper = Helper.new
+    helper.update_override = :custom_update_field
+    column = Column.new(:name, nil, nil)
+
+    assert_equal 'custom:record:record_name', helper.active_scaffold_update_for(column)
+  end
+
+  def test_generic_update_renders_operator_and_hidden_value_input
+    helper = Helper.new
+    column = Column.new(:name, nil, nil)
+
+    html = helper.active_scaffold_update_for(column)
+
+    assert_includes html, 'select:record[name][operator]'
+    assert_includes html, 'input:name:record[name][value]:display: none;'
+  end
+
+  def test_generic_update_shows_value_for_replace_operator
+    helper = Helper.new
+    helper.batch_values = {name: {value: {operator: 'REPLACE'}}}
+    column = Column.new(:name, nil, nil)
+
+    html = helper.active_scaffold_update_for(column)
+
+    assert_includes html, 'input:name:record[name][value]:'
+    refute_includes html, 'display: none;'
+  end
+
+  def test_numeric_update_renders_operator_value_and_option_controls
+    helper = Helper.new
+    helper.batch_values = {
+      amount: {value: {'operator' => 'PLUS', 'value' => '5', 'opt' => 'PERCENT'}}
+    }
+    column = Column.new(:amount, DatabaseColumn.new(false, :integer), :numeric)
+
+    html = helper.active_scaffold_update_numeric(column, id: 'record_amount')
+
+    assert_includes html, 'record[amount][operator]'
+    assert_includes html, 'text:record[amount][value]:5:record_amount_value:'
+    assert_includes html, 'record[amount][opt]'
+    assert helper.attribute_calls.any? { |_, options| options[:proc_options][:batch_role] == :batch_update_value }
+  end
+
+  def test_form_ui_dispatches_to_numeric_update
+    helper = Helper.new
+    column = Column.new(:amount, DatabaseColumn.new(false, :integer), :numeric)
+
+    html = helper.active_scaffold_update_for(column)
+
+    assert_includes html, 'record[amount][operator]'
   end
 end

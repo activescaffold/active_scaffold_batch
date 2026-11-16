@@ -25,7 +25,7 @@ class BatchUpdateTest < Minitest::Test
 
   class Model
     class << self
-      attr_accessor :timestamp
+      attr_accessor :timestamp, :update_args, :where_args, :relation
 
       def quote_value(value)
         value.nil? ? 'NULL' : value.to_s
@@ -38,12 +38,48 @@ class BatchUpdateTest < Minitest::Test
       def touch_attributes_with_time
         {'updated_at' => timestamp}
       end
+
+      def update_all(*args)
+        self.update_args = args
+      end
+
+      def primary_key
+        :id
+      end
+
+      def where(args)
+        self.where_args = args
+        self.relation = Relation.new
+      end
     end
   end
 
-  BatchUpdateConfig = Struct.new(:update_timestamps)
+  class Relation
+    attr_reader :updates
+
+    def update_all(updates)
+      @updates = updates
+    end
+  end
+
+  BatchUpdateConfig = Struct.new(:update_timestamps, :process_mode, :crud_type)
   Config = Struct.new(:model, :batch_update)
-  Record = Struct.new(:amount)
+  class Record
+    attr_accessor :amount, :as_marked
+
+    def initialize(amount = nil)
+      @amount = amount
+      @as_marked = true
+    end
+
+    def authorized_for?(crud_type:)
+      crud_type == :update
+    end
+
+    def to_label
+      'Batch record'
+    end
+  end
   DateRecord = Struct.new(:started_at)
 
   class DateValue
@@ -81,12 +117,18 @@ class BatchUpdateTest < Minitest::Test
 
     include ActiveScaffold::Actions::BatchUpdate
 
-    attr_reader :active_scaffold_config, :params
+    attr_accessor :successful
+    attr_reader :active_scaffold_config, :params, :records, :marked_records, :events,
+                :flash, :rendered
     attr_writer :batch_update_values
 
     def initialize
       @params = {}
-      @active_scaffold_config = Config.new(Model, BatchUpdateConfig.new(true))
+      @active_scaffold_config = Config.new(Model, BatchUpdateConfig.new(true, :update, :update))
+      @records = []
+      @marked_records = [4, 5]
+      @events = []
+      @flash = {}
     end
 
     def action_name
@@ -105,9 +147,61 @@ class BatchUpdateTest < Minitest::Test
       value.is_a?(Hash)
     end
 
-    public :batch_update_all_value_for_numeric, :batch_update_value_for_numeric,
-           :batch_update_value_for_date_picker, :get_update_all_attribute,
-           :update_attribute_values_from_params, :updates_for_update_all
+    def each_record_in_scope(&)
+      records.each(&)
+    end
+
+    def each_marked_record(&)
+      records.each(&)
+    end
+
+    def update_save(**)
+      self.successful = true if successful.nil?
+    end
+
+    def successful?
+      successful != false
+    end
+
+    def all_conditions
+      {active: true}
+    end
+
+    def do_search
+      events << :search
+    end
+
+    def do_demark_all
+      events << :demark
+    end
+
+    def do_refresh_list
+      events << :refresh
+    end
+
+    def responds_to_parent
+      events << :parent
+      yield
+    end
+
+    def return_to_main
+      events << :return
+    end
+
+    def render(**options)
+      @rendered = options
+    end
+
+    def as_(key, **)
+      key.to_s
+    end
+
+    public :batch_edit_respond_to_html, :batch_edit_respond_to_js,
+           :batch_update_all_value_for_numeric, :batch_update_listed, :batch_update_marked,
+           :batch_update_respond_to_html, :batch_update_respond_to_js,
+           :batch_update_value_for_numeric, :batch_update_value_for_date_picker,
+           :error_records, :get_update_all_attribute, :update_all_listed_records, :update_all_marked_records,
+           :update_attribute_values_from_params, :update_record_in_batch, :updates_for_update_all
   end
 
   def setup
@@ -255,5 +349,90 @@ class BatchUpdateTest < Minitest::Test
     values = @controller.update_attribute_values_from_params(Columns.new(name), attributes)
 
     assert_nil values[:name][:value][:value]
+  end
+
+  def test_listed_update_assigns_values_and_saves_each_record
+    name = Column.new(:amount, nil, nil)
+    @controller.batch_update_values = {
+      amount: {column: name, value: {operator: 'REPLACE', value: 42}}
+    }
+    record = Record.new(10)
+    @controller.records << record
+
+    @controller.batch_update_listed
+
+    assert_equal 42, record.amount
+    assert_empty @controller.error_records
+  end
+
+  def test_marked_update_unmarks_successful_records
+    @controller.params[:batch_scope] = 'MARKED'
+    @controller.records << @record
+
+    @controller.batch_update_marked
+
+    assert_equal false, @record.as_marked
+  end
+
+  def test_listed_update_all_runs_search_and_updates_model
+    @controller.active_scaffold_config.batch_update.process_mode = :update_all
+    @controller.batch_update_values = {
+      amount: {column: @column, value: {operator: 'REPLACE', value: '12', opt: 'ABSOLUTE'}}
+    }
+
+    @controller.batch_update_listed
+
+    assert_includes @controller.events, :search
+    assert_equal({active: true}, Model.update_args.last)
+  end
+
+  def test_marked_update_all_targets_ids_and_clears_marks
+    @controller.active_scaffold_config.batch_update.process_mode = :update_all
+    @controller.batch_update_values = {
+      amount: {column: @column, value: {operator: 'REPLACE', value: '12', opt: 'ABSOLUTE'}}
+    }
+
+    @controller.batch_update_marked
+
+    assert_equal({id: [4, 5]}, Model.where_args)
+    assert Model.relation.updates
+    assert_includes @controller.events, :demark
+  end
+
+  def test_edit_responses_render_form_or_return_to_main
+    @controller.batch_edit_respond_to_html
+    assert_equal({action: 'batch_update'}, @controller.rendered)
+    @controller.batch_edit_respond_to_js
+    assert_equal({partial: 'batch_update_form'}, @controller.rendered)
+
+    @controller.error_records << @record
+    @controller.batch_edit_respond_to_html
+    assert_includes @controller.events, :return
+  end
+
+  def test_update_html_response_handles_success_error_and_iframe
+    @controller.instance_variable_set(:@record, @record)
+    @controller.batch_update_respond_to_html
+    assert_equal 'updated_model', @controller.flash[:info]
+    assert_includes @controller.events, :return
+
+    @controller.error_records << @record
+    @controller.batch_update_respond_to_html
+    assert_equal({action: 'batch_update'}, @controller.rendered)
+
+    @controller.params[:iframe] = 'true'
+    @controller.error_records.clear
+    @controller.successful = true
+    @controller.batch_update_respond_to_html
+    assert_includes @controller.events, :refresh
+    assert_equal({action: 'on_batch_update.js', layout: false}, @controller.rendered)
+  end
+
+  def test_update_js_response_refreshes_and_renders
+    @controller.batch_update_respond_to_js
+
+    assert_equal 'batch_processing_successful', @controller.flash[:info]
+    assert_includes @controller.events, :refresh
+    assert_equal({action: 'on_batch_update'}, @controller.rendered)
   end
 end

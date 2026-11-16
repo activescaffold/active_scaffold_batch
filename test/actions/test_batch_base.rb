@@ -13,8 +13,9 @@ require_relative '../../lib/active_scaffold/actions/batch_base'
 class BatchBaseTest < Minitest::Test
   DatabaseColumn = Struct.new(:type)
   Column = Struct.new(:form_ui, :column, :name)
-  ActionConfig = Struct.new(:crud_type)
-  Config = Struct.new(:batch_update)
+  Columns = Struct.new(:visible_columns_names)
+  ActionConfig = Struct.new(:crud_type, :columns, :formats)
+  Config = Struct.new(:batch_update, :formats)
 
   class Errors
     attr_reader :messages
@@ -48,12 +49,14 @@ class BatchBaseTest < Minitest::Test
     include ActiveScaffold::Actions::BatchBase
 
     attr_accessor :action_name, :record
-    attr_reader :active_scaffold_config, :params
+    attr_reader :active_scaffold_config, :params, :events, :flash, :rendered, :api_response
 
     def initialize
       @params = {}
-      @active_scaffold_config = Config.new(ActionConfig.new(:update))
+      @active_scaffold_config = Config.new(ActionConfig.new(:update, Columns.new([:name]), [:json]), [:csv])
       @action_name = 'batch_update'
+      @events = []
+      @flash = {}
     end
 
     def override_batch_update_value(form_ui)
@@ -68,8 +71,35 @@ class BatchBaseTest < Minitest::Test
       key.to_s
     end
 
-    public :authorized_for_job?, :batch_scope, :batch_successful?, :column_form_ui,
-           :error_records, :set_record_attribute
+    def do_refresh_list
+      events << :refresh
+    end
+
+    def render(**options)
+      @rendered = options
+    end
+
+    def responds_to_parent
+      events << :parent
+      yield
+    end
+
+    def return_to_main
+      events << :return
+    end
+
+    def response_to_api(format, columns)
+      @api_response = [format, columns]
+    end
+
+    def default_formats
+      [:html]
+    end
+
+    public :authorized_for_job?, :batch_base_formats, :batch_base_respond_to_html,
+           :batch_base_respond_to_json, :batch_base_respond_to_js, :batch_base_respond_to_xml,
+           :batch_scope, :batch_successful?, :column_form_ui, :error_records,
+           :set_record_attribute, :temporary_id
   end
 
   def test_batch_scope_accepts_listed_and_removes_parameter
@@ -155,5 +185,50 @@ class BatchBaseTest < Minitest::Test
     assert controller.authorized_for_job?(record)
     assert_empty controller.error_records
     assert controller.batch_successful?
+  end
+
+  def test_html_response_returns_to_main_and_sets_success_message
+    controller = Controller.new
+
+    controller.batch_base_respond_to_html
+
+    assert_equal 'batch_processing_successful', controller.flash[:info]
+    assert_equal [:return], controller.events
+  end
+
+  def test_iframe_html_response_refreshes_and_renders_parent_script
+    controller = Controller.new
+    controller.params[:iframe] = 'true'
+
+    controller.batch_base_respond_to_html
+
+    assert_equal %i[refresh parent], controller.events
+    assert_equal({action: 'on_batch_base.js', layout: false}, controller.rendered)
+  end
+
+  def test_default_js_response_refreshes_and_renders
+    controller = Controller.new
+
+    controller.batch_base_respond_to_js
+
+    assert_equal [:refresh], controller.events
+    assert_equal({action: 'on_batch_base'}, controller.rendered)
+  end
+
+  def test_default_api_responses_use_visible_columns
+    controller = Controller.new
+
+    controller.batch_base_respond_to_xml
+    assert_equal [:xml, [:name]], controller.api_response
+    controller.batch_base_respond_to_json
+    assert_equal [:json, [:name]], controller.api_response
+  end
+
+  def test_default_formats_combine_all_configured_formats
+    assert_equal %i[html csv json], Controller.new.batch_base_formats
+  end
+
+  def test_temporary_id_is_a_numeric_string
+    assert_match(/\A\d+\z/, Controller.new.temporary_id)
   end
 end
