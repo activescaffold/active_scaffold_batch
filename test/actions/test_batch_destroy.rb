@@ -12,7 +12,8 @@ require_relative '../../lib/active_scaffold/actions/batch_base'
 require_relative '../../lib/active_scaffold/actions/batch_destroy'
 
 class BatchDestroyTest < Minitest::Test
-  ActionConfig = Struct.new(:process_mode)
+  Link = Struct.new(:security_method)
+  ActionConfig = Struct.new(:process_mode, :link)
   Config = Struct.new(:batch_destroy, :actions, :model)
 
   class Errors
@@ -39,11 +40,19 @@ class BatchDestroyTest < Minitest::Test
   end
 
   class Relation
-    attr_reader :deleted
+    attr_reader :delete_args, :where_args
 
-    def delete_all
-      @deleted = true
+    def where(*args)
+      @where_args = args
+      self
     end
+
+    def delete_all(*args)
+      @delete_args = args
+      nil
+    end
+
+    def deleted? = !delete_args.nil?
   end
 
   class Model
@@ -68,13 +77,20 @@ class BatchDestroyTest < Minitest::Test
 
     include ActiveScaffold::Actions::BatchDestroy
 
-    attr_reader :active_scaffold_config, :demarked, :marked_records, :params, :records
+    attr_accessor :destroy_allowed
+    attr_reader :active_scaffold_config, :demarked, :marked_records, :params, :processed_actions, :records
 
     def initialize(process_mode: :delete)
       @params = {}
-      @active_scaffold_config = Config.new(ActionConfig.new(process_mode), [:mark], Model)
+      @active_scaffold_config = Config.new(
+        ActionConfig.new(process_mode, [Link.new(:destroy_allowed?)]),
+        [:mark],
+        Model
+      )
       @marked_records = [1, 2]
       @records = []
+      @processed_actions = []
+      @destroy_allowed = true
     end
 
     def action_name
@@ -97,11 +113,38 @@ class BatchDestroyTest < Minitest::Test
       records.each(&)
     end
 
+    def each_marked_record(&)
+      records.each(&)
+    end
+
+    def filtered_query
+      @filtered_query ||= Relation.new
+    end
+
+    def all_conditions
+      {active: true}
+    end
+
+    def authorized_for?(crud_type:)
+      crud_type == :delete
+    end
+
+    def destroy_allowed?
+      destroy_allowed
+    end
+
+    def process_action_link_action(action)
+      processed_actions << action
+      yield
+    end
+
     def authorized_for_job?(_record)
       true
     end
 
-    public :batch_destroy_listed, :batch_destroy_marked, :batch_destroy_marked_ignore?, :destroy_record, :error_records
+    public :batch_destroy_authorized?, :batch_destroy_authorized_filter,
+           :batch_destroy_listed, :batch_destroy_marked,
+           :batch_destroy_marked_ignore?, :destroy_record, :error_records
   end
 
   def test_successful_marked_destroy_unmarks_record
@@ -130,8 +173,17 @@ class BatchDestroyTest < Minitest::Test
     controller.batch_destroy_marked
 
     assert_equal({id: [1, 2]}, Model.where_args)
-    assert Model.relation.deleted
+    assert Model.relation.deleted?
     assert controller.demarked
+  end
+
+  def test_delete_all_removes_every_record_in_the_filtered_list
+    controller = Controller.new(process_mode: :delete_all)
+
+    controller.batch_destroy_listed
+
+    assert_equal ['1=1'], controller.filtered_query.where_args
+    assert_equal [{active: true}], controller.filtered_query.delete_args
   end
 
   def test_marked_link_is_ignored_without_mark_action
@@ -150,5 +202,33 @@ class BatchDestroyTest < Minitest::Test
 
     assert record.as_marked
     assert_empty controller.error_records
+  end
+
+  def test_marked_destroy_processes_each_record
+    controller = Controller.new
+    record = Record.new
+    controller.records << record
+
+    controller.batch_destroy_marked
+
+    assert_empty controller.error_records
+  end
+
+  def test_public_action_and_default_authorization
+    controller = Controller.new
+
+    controller.batch_destroy
+
+    assert_equal [:batch_base], controller.processed_actions
+    assert controller.batch_destroy_authorized?
+  end
+
+  def test_batch_destroy_configuration_authorization
+    controller = Controller.new
+
+    controller.batch_destroy_authorized_filter
+    controller.destroy_allowed = false
+
+    assert_raises(ActiveScaffold::ActionNotAllowed) { controller.batch_destroy_authorized_filter }
   end
 end

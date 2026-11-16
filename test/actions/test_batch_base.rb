@@ -63,6 +63,14 @@ class BatchBaseTest < Minitest::Test
       :numeric_value if form_ui == :numeric
     end
 
+    def batch_update_values
+      @batch_update_values || {}
+    end
+
+    def do_new
+      @record = Record.new
+    end
+
     def numeric_value(_column, _record, value)
       value[:value] * 2
     end
@@ -104,7 +112,7 @@ class BatchBaseTest < Minitest::Test
     public :authorized_for_job?, :batch_base_formats, :batch_base_respond_to_html,
            :batch_base_respond_to_json, :batch_base_respond_to_js, :batch_base_respond_to_xml,
            :batch_scope, :batch_successful?, :column_form_ui, :error_records,
-           :set_record_attribute, :temporary_id
+           :prepare_error_record, :set_record_attribute, :temporary_id
   end
 
   def test_batch_scope_accepts_listed_and_removes_parameter
@@ -171,6 +179,30 @@ class BatchBaseTest < Minitest::Test
     controller.set_record_attribute(column, :amount, 7)
 
     assert_equal 7, controller.record.amount
+  end
+
+  def test_prepare_error_record_applies_plain_values_and_leaves_overridden_values_alone
+    plain_controller = Controller.new
+    plain_column = Column.new(nil, nil, :amount)
+    plain_controller.instance_variable_set(
+      :@batch_update_values,
+      {amount: {column: plain_column, value: {value: 12}}}
+    )
+
+    plain_controller.prepare_error_record
+
+    assert_equal 12, plain_controller.instance_variable_get(:@record).amount
+
+    override_controller = Controller.new
+    numeric_column = Column.new(:numeric, nil, :amount)
+    override_controller.instance_variable_set(
+      :@batch_update_values,
+      {amount: {column: numeric_column, value: {value: 12}}}
+    )
+
+    override_controller.prepare_error_record
+
+    assert_nil override_controller.instance_variable_get(:@record).amount
   end
 
   def test_unauthorized_record_gets_error_and_is_collected

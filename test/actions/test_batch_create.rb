@@ -13,23 +13,32 @@ require_relative '../../lib/active_scaffold/actions/batch_base'
 require_relative '../../lib/active_scaffold/actions/batch_create'
 
 class BatchCreateTest < Minitest::Test
-  Association = Struct.new(:name)
-  Column = Struct.new(:association, :name, :form_ui, :column)
+  Link = Struct.new(:security_method)
+  Association = Struct.new(:name, :polymorphic) do
+    alias_method :polymorphic?, :polymorphic
+  end
+  Column = Struct.new(:association, :name, :form_ui, :column) do
+    def ==(other)
+      other == name || super
+    end
+  end
   ActionConfig = Struct.new(
     :default_batch_by_column,
     :run_in_transaction,
     :process_mode,
     :columns,
-    :crud_type
+    :crud_type,
+    :link
   )
 
   class Config
-    attr_accessor :batch_create, :model, :columns
+    attr_accessor :batch_create, :model, :columns, :formats
 
     def initialize(batch_create, model = Model, columns = {})
       @batch_create = batch_create
       @model = model
       @columns = columns
+      @formats = [:json]
     end
 
     def label(count:)
@@ -109,23 +118,31 @@ class BatchCreateTest < Minitest::Test
     end
   end
 
-  class Controller
+  class ParentController
+    def create_ignore?
+      false
+    end
+  end
+
+  class Controller < ParentController
     def self.before_action(*); end
 
     def self.helper_method(*); end
 
     include ActiveScaffold::Actions::BatchCreate
 
-    attr_accessor :record, :save_error, :successful
+    attr_accessor :create_allowed, :record, :save_error, :successful
     attr_reader :active_scaffold_config, :params, :records, :scope, :flash, :events, :rendered
 
     def initialize(batch_by: nil, transaction: true)
+      super()
       @params = {}
-      config = ActionConfig.new(batch_by, transaction, :create, Columns.new, :create)
+      config = ActionConfig.new(batch_by, transaction, :create, Columns.new, :create, Link.new(:create_allowed?))
       @active_scaffold_config = Config.new(config)
       @new_records = 0
       @flash = {}
       @events = []
+      @create_allowed = true
     end
 
     def do_new
@@ -162,6 +179,14 @@ class BatchCreateTest < Minitest::Test
       crud_type == :create
     end
 
+    def create_allowed?
+      create_allowed
+    end
+
+    def default_formats
+      [:html]
+    end
+
     def column_value_from_param_value(_record, _column, value)
       "converted-#{value}"
     end
@@ -176,6 +201,16 @@ class BatchCreateTest < Minitest::Test
 
     def respond_to_action(action)
       events << [:respond_to, action]
+    end
+
+    def process_action_link_action(action)
+      events << [:action_link, action]
+      yield
+    end
+
+    def active_scaffold_session_storage(id)
+      @session_storage ||= {}
+      @session_storage[id] ||= {}
     end
 
     def return_to_main
@@ -206,9 +241,11 @@ class BatchCreateTest < Minitest::Test
            :batch_create_multiple, :batch_create_respond_to_html, :batch_create_respond_to_js,
            :batch_new_respond_to_html, :batch_new_respond_to_js, :batch_values_for_column,
            :before_do_batch_create, :create_attribute_values_from_params,
+           :batch_create_authorized_filter,
            :create_record_in_batch, :do_batch_add, :do_batch_new, :error_records,
-           :run_in_transaction?, :run_in_transaction_if_enabled, :save_batch_create_record,
-           :validate_first?
+           :load_marked_records_parent, :marked_records_parent, :normalize_batch_create_errors,
+           :records_for_batch_create_column, :run_in_transaction?, :run_in_transaction_if_enabled,
+           :save_batch_create_record, :validate_first?
   end
 
   def test_scalar_batch_values_are_split_by_line
@@ -232,6 +269,16 @@ class BatchCreateTest < Minitest::Test
     assert_equal '1000', controller.scope
   end
 
+  def test_batch_new_with_batch_column_consumes_the_requested_scope
+    controller = Controller.new(batch_by: :team)
+    controller.params[:batch_scope] = 'MARKED'
+
+    controller.do_batch_new
+
+    refute_includes controller.params, :batch_scope
+    assert_equal 'MARKED', controller.send(:batch_scope)
+  end
+
   def test_batch_add_builds_requested_number_of_records
     controller = Controller.new
     controller.params[:num_records] = '3'
@@ -252,6 +299,62 @@ class BatchCreateTest < Minitest::Test
     controller = Controller.new(batch_by: :team)
 
     assert_equal :team, controller.batch_create_by_column
+  end
+
+  def test_public_batch_create_processes_the_action_link
+    controller = Controller.new
+    controller.params[:record] = {}
+
+    controller.batch_create
+
+    assert_includes controller.events, %i[action_link batch_base]
+  end
+
+  def test_marked_records_are_loaded_from_the_parent_session
+    controller = Controller.new(batch_by: :team)
+    controller.params[:batch_create_by] = 'projects'
+    controller.active_scaffold_session_storage('projects')['marked_records'] = {'1' => true, '2' => true}
+
+    assert_equal({'1' => true, '2' => true}, controller.marked_records_parent)
+  end
+
+  def test_batch_records_are_lazily_loaded_from_the_configured_column
+    controller = Controller.new(batch_by: :team)
+    controller.active_scaffold_config.columns[:team] = Column.new(Association.new(:teams, false), :team)
+    controller.params[:batch_create_by] = 'projects'
+    controller.active_scaffold_session_storage('projects')['marked_records'] = {'1' => true, '2' => true}
+
+    assert_equal %w[record-1 record-2], controller.send(:batch_create_by_records)
+  end
+
+  def test_records_for_batch_column_support_regular_and_polymorphic_associations
+    controller = Controller.new(batch_by: :team)
+    controller.params[:batch_create_by] = 'projects'
+    controller.active_scaffold_session_storage('projects')['marked_records'] = {'1' => true, '2' => true}
+
+    regular_column = Column.new(Association.new(:teams, false), :team)
+    regular = controller.records_for_batch_create_column(regular_column)
+    found_ids = nil
+    polymorphic_model = Object.new
+    polymorphic_model.define_singleton_method(:find) { |ids| found_ids = ids }
+    polymorphic_config = Struct.new(:model).new(polymorphic_model)
+    controller.define_singleton_method(:active_scaffold_config_for) { |_name| polymorphic_config }
+    polymorphic_column = Column.new(Association.new(:teams, true), :team)
+    polymorphic = controller.records_for_batch_create_column(polymorphic_column)
+
+    assert_equal %w[record-1 record-2], regular
+    assert_equal %w[1 2], found_ids
+    assert_equal %w[1 2], polymorphic
+  end
+
+  def test_submitted_batch_column_selects_records_instead_of_becoming_a_common_value
+    controller = Controller.new(batch_by: :team)
+    team = Column.new(nil, :team)
+
+    values = controller.create_attribute_values_from_params(Columns.new(team), team: "one\ntwo")
+
+    assert_empty values
+    assert_equal %w[one two], controller.send(:batch_create_by_records)
   end
 
   def test_association_save_error_marks_persisted_record_unsuccessful
@@ -299,6 +402,17 @@ class BatchCreateTest < Minitest::Test
     assert_empty controller.error_records
   end
 
+  def test_listed_create_applies_common_values_to_each_record
+    controller = Controller.new(batch_by: :team, transaction: false)
+    created_by = Struct.new(:id).new(1)
+    name = Column.new(nil, :name)
+    controller.instance_variable_set(:@batch_create_values, name: {column: name, value: 'Shared'})
+
+    controller.create_record_in_batch(created_by)
+
+    assert_equal 'Shared', controller.record.name
+  end
+
   def test_multiple_create_collects_invalid_records
     controller = Controller.new(transaction: false)
     controller.params[:record] = {
@@ -325,10 +439,54 @@ class BatchCreateTest < Minitest::Test
     assert_includes controller.error_records, record
   end
 
+  def test_validate_first_saves_all_records_after_successful_validation
+    controller = Controller.new(transaction: :validate_first)
+    controller.params[:record] = {
+      '1' => {name: 'First'},
+      '2' => {name: 'Second'}
+    }
+
+    controller.batch_create_multiple
+
+    assert_empty controller.error_records
+    assert_equal [:some_records_created, {count: 2, model: '2 records'}], controller.flash[:info]
+  end
+
+  def test_transaction_rolls_back_when_any_record_is_invalid
+    Model.rolled_back = false
+    controller = Controller.new(transaction: true)
+    controller.params[:record] = {
+      '1' => {name: 'Good'},
+      '2' => {name: 'Bad', valid: false}
+    }
+
+    controller.batch_create_multiple
+
+    assert Model.rolled_back
+    assert_equal %w[1 2], controller.error_records.keys
+    refute_includes controller.flash, :info
+  end
+
+  def test_batch_column_validation_errors_include_the_attempted_value
+    controller = Controller.new(batch_by: :team)
+    record = Record.new
+    record.team = 'Blue'
+    record.errors.add(:team, 'is invalid')
+    controller.record = record
+
+    controller.normalize_batch_create_errors
+
+    assert_equal ['Blue is invalid'], record.errors[:team]
+  end
+
   def test_new_and_create_responses_cover_success_error_and_iframe
     controller = Controller.new
     controller.batch_new_respond_to_html
     assert_equal({action: 'batch_create'}, controller.rendered)
+    controller.error_records << Record.new
+    controller.batch_new_respond_to_html
+    assert_includes controller.events, :return
+    controller.error_records.clear
     controller.batch_new_respond_to_js
     assert_equal({partial: 'batch_create_form'}, controller.rendered)
     controller.batch_add_respond_to_js
@@ -374,5 +532,18 @@ class BatchCreateTest < Minitest::Test
     assert controller.send(:batch_create_authorized?)
     refute controller.send(:batch_create_ignore?)
     assert_nil controller.send(:override_batch_create_value, :unknown)
+  end
+
+  def test_batch_create_configuration_authorization_ignore_and_formats
+    controller = Controller.new(batch_by: :team)
+
+    controller.batch_create_authorized_filter
+    refute controller.send(:create_ignore?)
+    assert_equal %i[html json], controller.send(:batch_new_formats)
+
+    controller.create_allowed = false
+    assert_raises(ActiveScaffold::ActionNotAllowed) { controller.batch_create_authorized_filter }
+
+    assert Controller.new.send(:create_ignore?)
   end
 end

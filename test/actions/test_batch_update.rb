@@ -14,6 +14,7 @@ require_relative '../../lib/active_scaffold/actions/batch_base'
 require_relative '../../lib/active_scaffold/actions/batch_update'
 
 class BatchUpdateTest < Minitest::Test
+  Link = Struct.new(:security_method)
   DatabaseColumn = Struct.new(:type, :null)
   Column = Struct.new(:name, :form_ui, :column)
 
@@ -62,8 +63,8 @@ class BatchUpdateTest < Minitest::Test
     end
   end
 
-  BatchUpdateConfig = Struct.new(:update_timestamps, :process_mode, :crud_type)
-  Config = Struct.new(:model, :batch_update)
+  BatchUpdateConfig = Struct.new(:update_timestamps, :process_mode, :crud_type, :columns, :link)
+  Config = Struct.new(:model, :batch_update, :formats)
   class Record
     attr_accessor :amount, :as_marked
 
@@ -117,22 +118,53 @@ class BatchUpdateTest < Minitest::Test
 
     include ActiveScaffold::Actions::BatchUpdate
 
-    attr_accessor :successful
+    attr_accessor :successful, :update_allowed, :update_succeeds
     attr_reader :active_scaffold_config, :params, :records, :marked_records, :events,
                 :flash, :rendered
     attr_writer :batch_update_values
 
     def initialize
       @params = {}
-      @active_scaffold_config = Config.new(Model, BatchUpdateConfig.new(true, :update, :update))
+      @active_scaffold_config = Config.new(
+        Model,
+        BatchUpdateConfig.new(true, :update, :update, Columns.new, Link.new(:update_allowed?)),
+        [:json]
+      )
       @records = []
       @marked_records = [4, 5]
       @events = []
       @flash = {}
+      @update_succeeds = true
+      @update_allowed = true
     end
 
     def action_name
       'batch_update'
+    end
+
+    def do_new
+      @record = Record.new
+    end
+
+    def respond_to_action(action)
+      events << [:respond_to, action]
+    end
+
+    def process_action_link_action(action)
+      events << [:action_link, action]
+      yield
+    end
+
+    def authorized_for?(crud_type:)
+      crud_type == :update
+    end
+
+    def update_allowed?
+      update_allowed
+    end
+
+    def default_formats
+      [:html]
     end
 
     def new_model
@@ -156,7 +188,7 @@ class BatchUpdateTest < Minitest::Test
     end
 
     def update_save(**)
-      self.successful = true if successful.nil?
+      self.successful = update_succeeds
     end
 
     def successful?
@@ -200,7 +232,10 @@ class BatchUpdateTest < Minitest::Test
            :batch_update_all_value_for_numeric, :batch_update_listed, :batch_update_marked,
            :batch_update_respond_to_html, :batch_update_respond_to_js,
            :batch_update_value_for_numeric, :batch_update_value_for_date_picker,
-           :error_records, :get_update_all_attribute, :update_all_listed_records, :update_all_marked_records,
+           :batch_update_authorized?, :batch_update_authorized_filter,
+           :batch_update_ignore?, :before_do_batch_update,
+           :error_records, :get_update_all_attribute, :override_batch_update_value,
+           :update_all_listed_records, :update_all_marked_records,
            :update_attribute_values_from_params, :update_record_in_batch, :updates_for_update_all
   end
 
@@ -274,6 +309,25 @@ class BatchUpdateTest < Minitest::Test
     )
 
     assert_equal '"amount" + 10.0', sql
+  end
+
+  def test_sql_multiplication_and_division
+    multiplication = @controller.batch_update_all_value_for_numeric(
+      @column,
+      {operator: 'TIMES', value: '3', opt: 'ABSOLUTE'}
+    )
+    division = @controller.batch_update_all_value_for_numeric(
+      @column,
+      {operator: 'DIVISION', value: '4', opt: 'ABSOLUTE'}
+    )
+
+    assert_equal '"amount" * 3.0', multiplication
+    assert_equal '"amount" / 4.0', division
+  end
+
+  def test_form_ui_override_is_used_only_when_a_handler_exists
+    assert_equal 'batch_update_value_for_numeric', @controller.override_batch_update_value(:numeric)
+    assert_nil @controller.override_batch_update_value(:unknown)
   end
 
   def test_sql_percentage_builds_column_relative_operand
@@ -374,6 +428,15 @@ class BatchUpdateTest < Minitest::Test
     assert_equal false, @record.as_marked
   end
 
+  def test_failed_update_collects_the_record
+    @controller.update_succeeds = false
+    @controller.records << @record
+
+    @controller.batch_update_listed
+
+    assert_equal [@record], @controller.error_records
+  end
+
   def test_listed_update_all_runs_search_and_updates_model
     @controller.active_scaffold_config.batch_update.process_mode = :update_all
     @controller.batch_update_values = {
@@ -408,6 +471,30 @@ class BatchUpdateTest < Minitest::Test
     @controller.error_records << @record
     @controller.batch_edit_respond_to_html
     assert_includes @controller.events, :return
+  end
+
+  def test_public_edit_and_update_actions_initialize_and_process_values
+    @controller.batch_edit
+    @controller.params[:record] = {}
+    @controller.params[:batch_scope] = 'LISTED'
+    @controller.batch_update
+
+    assert_includes @controller.events, %i[respond_to batch_edit]
+    assert_includes @controller.events, %i[action_link batch_base]
+    assert_instance_of Record, @controller.instance_variable_get(:@record)
+  end
+
+  def test_default_authorization_ignore_and_edit_formats
+    assert @controller.batch_update_authorized?
+    refute @controller.batch_update_ignore?
+    assert_equal %i[html json], @controller.send(:batch_edit_formats)
+  end
+
+  def test_batch_update_configuration_authorization
+    @controller.batch_update_authorized_filter
+    @controller.update_allowed = false
+
+    assert_raises(ActiveScaffold::ActionNotAllowed) { @controller.batch_update_authorized_filter }
   end
 
   def test_update_html_response_handles_success_error_and_iframe
