@@ -101,6 +101,10 @@ class BatchUpdateTest < Minitest::Test
       "converted-#{value}"
     end
 
+    def params_hash?(value)
+      value.is_a?(Hash)
+    end
+
     public :batch_update_all_value_for_numeric, :batch_update_value_for_numeric,
            :batch_update_value_for_date_picker, :get_update_all_attribute,
            :update_attribute_values_from_params, :updates_for_update_all
