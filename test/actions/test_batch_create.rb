@@ -57,7 +57,9 @@ class BatchCreateTest < Minitest::Test
         self.rolled_back = true
       end
 
-      delegate :new, to: :Record
+      def new # rubocop:disable Rails/Delegate -- preserve lexical constant lookup in this test double
+        Record.new
+      end
     end
   end
 
