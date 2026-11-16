@@ -57,9 +57,7 @@ class BatchCreateTest < Minitest::Test
         self.rolled_back = true
       end
 
-      def new
-        Record.new
-      end
+      delegate :new, to: :Record
     end
   end
 

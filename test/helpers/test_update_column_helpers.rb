@@ -178,7 +178,7 @@ class UpdateColumnHelpersTest < Minitest::Test
     assert_includes html, 'record[amount][operator]'
     assert_includes html, 'text:record[amount][value]:5:record_amount_value:'
     assert_includes html, 'record[amount][opt]'
-    assert helper.attribute_calls.any? { |_, options| options[:proc_options][:batch_role] == :batch_update_value }
+    assert(helper.attribute_calls.any? { |_, options| options[:proc_options][:batch_role] == :batch_update_value })
   end
 
   def test_form_ui_dispatches_to_numeric_update
