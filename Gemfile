@@ -6,6 +6,9 @@ source 'http://rubygems.org'
 #   gem "activesupport", ">= 2.3.5"
 
 gemspec
+
+gem 'simplecov', '~> 0.22.0', require: false
+gem 'simplecov_json_formatter', require: false
 # Add dependencies to develop your gem here.
 # Include everything needed to run rake, tests, features, etc.
 group :development do

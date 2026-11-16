@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'minitest/autorun'
+require 'test_helper'
 require 'active_support/core_ext/enumerable'
 
 module ActiveScaffold
