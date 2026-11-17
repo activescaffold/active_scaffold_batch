@@ -7,7 +7,17 @@ source 'http://rubygems.org'
 
 gemspec
 
+# TODO: Remove this override when ActiveScaffold 4.5 is released with plugin JavaScript test support.
+gem 'active_scaffold', github: 'activescaffold/active_scaffold', branch: 'master'
 gem 'simplecov', '~> 1.3', require: false
+
+group :test do
+  gem 'capybara'
+  gem 'jquery-rails'
+  gem 'propshaft'
+  gem 'puma'
+  gem 'selenium-webdriver'
+end
 # Add dependencies to develop your gem here.
 # Include everything needed to run rake, tests, features, etc.
 group :development do
